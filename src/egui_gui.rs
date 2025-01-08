@@ -257,63 +257,64 @@ impl MediaInspectorApp {
 
         let indent = "    ".repeat(depth);
         let is_selected = Some(&path) == selected_element.as_ref();
-        let header_text = if is_selected {
-            RichText::new(format!("{}{}", indent, element.name))
-                .color(Color32::YELLOW)
-                .size(16.0)
-        } else {
-            RichText::new(format!("{}{}", indent, element.name)).size(16.0)
-        };
-
-        let is_expanded = expanded_nodes.contains(&path);
+        let text = RichText::new(format!("{}{}", indent, element.name))
+            .size(16.0)
+            .color(if is_selected {
+                Color32::YELLOW
+            } else {
+                Color32::WHITE
+            });
 
         // 使用完整路径作为基础 ID
         let base_id = ui.make_persistent_id(path.as_str());
 
-        // 创建折叠头部
-        let header = egui::CollapsingHeader::new(header_text)
-            .id_source(base_id)
-            .default_open(false) // 默认关闭
-            .open(Some(is_expanded)); // 只有在展开集合中的才展开
-
-        // 显示折叠头部和内容
-        let header_response = header.show(ui, |ui| {
-            // 显示子元素
-            for (i, child) in element.children.iter().enumerate() {
-                ui.push_id(i, |ui| {
-                    Self::show_element_tree(
-                        ui,
-                        child,
-                        depth + 1,
-                        &path,
-                        search_text,
-                        expanded_nodes,
-                        selected_element,
-                    );
-                });
+        if element.children.is_empty() {
+            // 没有子元素的节点直接显示为标签
+            let response = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
+            if response.clicked() {
+                *selected_element = Some(path);
             }
-        });
+        } else {
+            // 有子元素的节点显示为可折叠的标题
+            let is_expanded = expanded_nodes.contains(&path);
+            let header = egui::CollapsingHeader::new(text)
+                .id_source(base_id)
+                .default_open(false)
+                .open(Some(is_expanded));
 
-        // 处理点击事件
-        let header_rect = header_response.header_response.rect;
-        let arrow_rect = egui::Rect::from_min_size(
-            header_rect.min,
-            egui::vec2(20.0, header_rect.height()), // 箭头区域宽度
-        );
+            let header_response = header.show(ui, |ui| {
+                for (i, child) in element.children.iter().enumerate() {
+                    ui.push_id(i, |ui| {
+                        Self::show_element_tree(
+                            ui,
+                            child,
+                            depth + 1,
+                            &path,
+                            search_text,
+                            expanded_nodes,
+                            selected_element,
+                        );
+                    });
+                }
+            });
 
-        // 点击箭头区域时处理展开/折叠
-        if header_response.header_response.clicked() {
-            let mouse_pos = ui.input(|i| i.pointer.hover_pos());
-            if let Some(pos) = mouse_pos {
-                if arrow_rect.contains(pos) {
-                    if is_expanded {
-                        expanded_nodes.remove(&path);
+            // 处理点击事件
+            let header_rect = header_response.header_response.rect;
+            let arrow_rect =
+                egui::Rect::from_min_size(header_rect.min, egui::vec2(20.0, header_rect.height()));
+
+            if header_response.header_response.clicked() {
+                let mouse_pos = ui.input(|i| i.pointer.hover_pos());
+                if let Some(pos) = mouse_pos {
+                    if arrow_rect.contains(pos) {
+                        if is_expanded {
+                            expanded_nodes.remove(&path);
+                        } else {
+                            expanded_nodes.insert(path.clone());
+                        }
                     } else {
-                        expanded_nodes.insert(path.clone());
+                        *selected_element = Some(path.clone());
                     }
-                } else {
-                    // 点击非箭头区域时更新选中元素
-                    *selected_element = Some(path.clone());
                 }
             }
         }
