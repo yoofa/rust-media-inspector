@@ -239,80 +239,112 @@ impl MediaInspectorApp {
         };
 
         let is_expanded = expanded_nodes.contains(&path);
-        if egui::CollapsingHeader::new(header_text)
-            .default_open(is_expanded || matches_search)
-            .show(ui, |ui| {
-                // 点击元素时更新选中状态
-                if ui
-                    .interact(ui.min_rect(), ui.id(), egui::Sense::click())
-                    .clicked()
-                {
+
+        // 使用完整路径作为基础 ID
+        let base_id = ui.make_persistent_id(path.as_str());
+
+        // 创建折叠头部
+        let header = egui::CollapsingHeader::new(header_text)
+            .id_source(base_id)
+            .default_open(is_expanded || matches_search);
+
+        // 显示折叠头部和内容
+        let header_response = header.show(ui, |ui| {
+            // 为内容区域创建唯一 ID
+            ui.push_id(format!("content_{}", path), |ui| {
+                // 创建可点击区域
+                let label = egui::Label::new(RichText::new("").color(Color32::TRANSPARENT))
+                    .sense(egui::Sense::click());
+                let response = ui.add(label);
+
+                if response.clicked() {
                     *selected_element = Some(path.clone());
                 }
 
-                for child in &element.children {
-                    Self::show_element_tree(
-                        ui,
-                        child,
-                        depth + 1,
-                        &path,
-                        search_text,
-                        expanded_nodes,
-                        selected_element,
-                    );
+                // 显示子元素
+                for (i, child) in element.children.iter().enumerate() {
+                    // 为每个子元素添加唯一 ID
+                    ui.push_id(i, |ui| {
+                        Self::show_element_tree(
+                            ui,
+                            child,
+                            depth + 1,
+                            &path,
+                            search_text,
+                            expanded_nodes,
+                            selected_element,
+                        );
+                    });
                 }
-            })
-            .header_response
-            .clicked()
-        {
+            });
+        });
+
+        // 处理折叠/展开状态
+        if header_response.header_response.clicked() {
             if is_expanded {
                 expanded_nodes.remove(&path);
             } else {
-                expanded_nodes.insert(path);
+                expanded_nodes.insert(path.clone());
             }
         }
     }
 
     // 显示元素详情（右侧面板）
     fn show_element_details(&self, ui: &mut egui::Ui, element: &ElementInfo) {
-        ui.heading(RichText::new(&element.name).color(Color32::LIGHT_BLUE));
-        ui.separator();
+        // 为详情视图创建唯一 ID
+        ui.push_id("details", |ui| {
+            ui.heading(RichText::new(&element.name).color(Color32::LIGHT_BLUE));
+            ui.separator();
 
-        // 基本信息
-        ui.group(|ui| {
-            ui.heading("Basic Information");
-            ui.label(
-                RichText::new(format!("Offset: {}", element.offset)).color(Color32::LIGHT_GRAY),
-            );
-            ui.label(RichText::new(format!("Size: {}", element.size)).color(Color32::LIGHT_GRAY));
-        });
+            // 基本信息
+            ui.push_id("basic_info", |ui| {
+                ui.group(|ui| {
+                    ui.heading("Basic Information");
+                    ui.label(
+                        RichText::new(format!("Offset: {}", element.offset))
+                            .color(Color32::LIGHT_GRAY),
+                    );
+                    ui.label(
+                        RichText::new(format!("Size: {}", element.size)).color(Color32::LIGHT_GRAY),
+                    );
+                });
+            });
 
-        // 属性信息
-        if !element.properties.is_empty() {
-            ui.group(|ui| {
-                ui.heading("Properties");
-                egui::Grid::new("properties_grid")
-                    .striped(true)
-                    .spacing([40.0, 4.0])
-                    .show(ui, |ui| {
-                        for (key, value) in &element.properties {
-                            ui.label(RichText::new(key).color(Color32::LIGHT_GREEN));
-                            ui.label(value);
-                            ui.end_row();
+            // 属性信息
+            if !element.properties.is_empty() {
+                ui.push_id("properties", |ui| {
+                    ui.group(|ui| {
+                        ui.heading("Properties");
+                        egui::Grid::new(ui.make_persistent_id("properties_grid"))
+                            .striped(true)
+                            .spacing([40.0, 4.0])
+                            .show(ui, |ui| {
+                                for (i, (key, value)) in element.properties.iter().enumerate() {
+                                    ui.push_id(i, |ui| {
+                                        ui.label(RichText::new(key).color(Color32::LIGHT_GREEN));
+                                        ui.label(value);
+                                        ui.end_row();
+                                    });
+                                }
+                            });
+                    });
+                });
+            }
+
+            // 子元素信息
+            if !element.children.is_empty() {
+                ui.push_id("children", |ui| {
+                    ui.group(|ui| {
+                        ui.heading("Children");
+                        for (i, child) in element.children.iter().enumerate() {
+                            ui.push_id(i, |ui| {
+                                ui.label(&child.name);
+                            });
                         }
                     });
-            });
-        }
-
-        // 子元素信息
-        if !element.children.is_empty() {
-            ui.group(|ui| {
-                ui.heading("Children");
-                for child in &element.children {
-                    ui.label(&child.name);
-                }
-            });
-        }
+                });
+            }
+        });
     }
 
     // 查找指定路径的元素
