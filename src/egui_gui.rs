@@ -188,12 +188,14 @@ impl eframe::App for MediaInspectorApp {
                                 .color(Color32::LIGHT_BLUE),
                         );
                         ui.separator();
-                        for element in &info.structure {
+                        for (i, element) in info.structure.iter().enumerate() {
                             Self::show_element_tree(
                                 ui,
                                 element,
                                 0,
                                 "",
+                                0,
+                                i,
                                 &search_text,
                                 &mut expanded_nodes,
                                 &mut selected_element,
@@ -240,11 +242,17 @@ impl MediaInspectorApp {
         element: &ElementInfo,
         depth: usize,
         parent_path: &str,
+        parent_index: usize,
+        index: usize,
         search_text: &str,
         expanded_nodes: &mut std::collections::HashSet<String>,
         selected_element: &mut Option<String>,
     ) {
-        let path = format!("{}/{}", parent_path, element.name);
+        // 显示路径用于UI显示和选择
+        let display_path = format!("{}/{}", parent_path, element.name);
+        // 唯一路径用于内部标识，包含索引信息
+        let unique_path = format!("{}#{}_{}", parent_path, parent_index, index);
+
         let matches_search = search_text.is_empty()
             || element
                 .name
@@ -256,7 +264,7 @@ impl MediaInspectorApp {
         }
 
         let indent = "    ".repeat(depth);
-        let is_selected = Some(&path) == selected_element.as_ref();
+        let is_selected = Some(&display_path) == selected_element.as_ref();
         let text = RichText::new(format!("{}{}", indent, element.name))
             .size(16.0)
             .color(if is_selected {
@@ -265,31 +273,30 @@ impl MediaInspectorApp {
                 Color32::WHITE
             });
 
-        // 使用完整路径作为基础 ID
-        let base_id = ui.make_persistent_id(path.as_str());
+        let base_id = ui.make_persistent_id(&unique_path);
 
         if element.children.is_empty() {
-            // 没有子元素的节点直接显示为标签
             let response = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
             if response.clicked() {
-                *selected_element = Some(path);
+                *selected_element = Some(display_path);
             }
         } else {
-            // 有子元素的节点显示为可折叠的标题
-            let is_expanded = expanded_nodes.contains(&path);
+            let is_expanded = expanded_nodes.contains(&unique_path);
             let header = egui::CollapsingHeader::new(text)
                 .id_source(base_id)
                 .default_open(false)
                 .open(Some(is_expanded));
 
             let header_response = header.show(ui, |ui| {
-                for (i, child) in element.children.iter().enumerate() {
-                    ui.push_id(i, |ui| {
+                for (child_index, child) in element.children.iter().enumerate() {
+                    ui.push_id(child_index, |ui| {
                         Self::show_element_tree(
                             ui,
                             child,
                             depth + 1,
-                            &path,
+                            &display_path,
+                            index,
+                            child_index,
                             search_text,
                             expanded_nodes,
                             selected_element,
@@ -298,7 +305,6 @@ impl MediaInspectorApp {
                 }
             });
 
-            // 处理点击事件
             let header_rect = header_response.header_response.rect;
             let arrow_rect =
                 egui::Rect::from_min_size(header_rect.min, egui::vec2(20.0, header_rect.height()));
@@ -308,12 +314,12 @@ impl MediaInspectorApp {
                 if let Some(pos) = mouse_pos {
                     if arrow_rect.contains(pos) {
                         if is_expanded {
-                            expanded_nodes.remove(&path);
+                            expanded_nodes.remove(&unique_path);
                         } else {
-                            expanded_nodes.insert(path.clone());
+                            expanded_nodes.insert(unique_path);
                         }
                     } else {
-                        *selected_element = Some(path.clone());
+                        *selected_element = Some(display_path);
                     }
                 }
             }
