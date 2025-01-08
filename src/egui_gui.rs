@@ -18,6 +18,31 @@ pub fn run_gui() -> i32 {
         "Media Inspector",
         options,
         Box::new(|cc| {
+            let mut style = (*cc.egui_ctx.style()).clone();
+            style.text_styles = [
+                (
+                    egui::TextStyle::Heading,
+                    egui::FontId::new(20.0, egui::FontFamily::Proportional),
+                ),
+                (
+                    egui::TextStyle::Body,
+                    egui::FontId::new(16.0, egui::FontFamily::Proportional),
+                ),
+                (
+                    egui::TextStyle::Monospace,
+                    egui::FontId::new(16.0, egui::FontFamily::Monospace),
+                ),
+                (
+                    egui::TextStyle::Button,
+                    egui::FontId::new(16.0, egui::FontFamily::Proportional),
+                ),
+                (
+                    egui::TextStyle::Small,
+                    egui::FontId::new(14.0, egui::FontFamily::Proportional),
+                ),
+            ]
+            .into();
+            cc.egui_ctx.set_style(style);
             cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Box::new(MediaInspectorApp::default())
         }),
@@ -233,9 +258,11 @@ impl MediaInspectorApp {
         let indent = "    ".repeat(depth);
         let is_selected = Some(&path) == selected_element.as_ref();
         let header_text = if is_selected {
-            RichText::new(format!("{}{}", indent, element.name)).color(Color32::YELLOW)
-        } else {
             RichText::new(format!("{}{}", indent, element.name))
+                .color(Color32::YELLOW)
+                .size(16.0)
+        } else {
+            RichText::new(format!("{}{}", indent, element.name)).size(16.0)
         };
 
         let is_expanded = expanded_nodes.contains(&path);
@@ -246,83 +273,94 @@ impl MediaInspectorApp {
         // 创建折叠头部
         let header = egui::CollapsingHeader::new(header_text)
             .id_source(base_id)
-            .default_open(is_expanded || matches_search);
+            .default_open(false) // 默认关闭
+            .open(Some(is_expanded)); // 只有在展开集合中的才展开
 
         // 显示折叠头部和内容
         let header_response = header.show(ui, |ui| {
-            // 为内容区域创建唯一 ID
-            ui.push_id(format!("content_{}", path), |ui| {
-                // 创建可点击区域
-                let label = egui::Label::new(RichText::new("").color(Color32::TRANSPARENT))
-                    .sense(egui::Sense::click());
-                let response = ui.add(label);
-
-                if response.clicked() {
-                    *selected_element = Some(path.clone());
-                }
-
-                // 显示子元素
-                for (i, child) in element.children.iter().enumerate() {
-                    // 为每个子元素添加唯一 ID
-                    ui.push_id(i, |ui| {
-                        Self::show_element_tree(
-                            ui,
-                            child,
-                            depth + 1,
-                            &path,
-                            search_text,
-                            expanded_nodes,
-                            selected_element,
-                        );
-                    });
-                }
-            });
+            // 显示子元素
+            for (i, child) in element.children.iter().enumerate() {
+                ui.push_id(i, |ui| {
+                    Self::show_element_tree(
+                        ui,
+                        child,
+                        depth + 1,
+                        &path,
+                        search_text,
+                        expanded_nodes,
+                        selected_element,
+                    );
+                });
+            }
         });
 
-        // 处理折叠/展开状态
+        // 处理点击事件
+        let header_rect = header_response.header_response.rect;
+        let arrow_rect = egui::Rect::from_min_size(
+            header_rect.min,
+            egui::vec2(20.0, header_rect.height()), // 箭头区域宽度
+        );
+
+        // 点击箭头区域时处理展开/折叠
         if header_response.header_response.clicked() {
-            if is_expanded {
-                expanded_nodes.remove(&path);
-            } else {
-                expanded_nodes.insert(path.clone());
+            let mouse_pos = ui.input(|i| i.pointer.hover_pos());
+            if let Some(pos) = mouse_pos {
+                if arrow_rect.contains(pos) {
+                    if is_expanded {
+                        expanded_nodes.remove(&path);
+                    } else {
+                        expanded_nodes.insert(path.clone());
+                    }
+                } else {
+                    // 点击非箭头区域时更新选中元素
+                    *selected_element = Some(path.clone());
+                }
             }
         }
     }
 
     // 显示元素详情（右侧面板）
     fn show_element_details(&self, ui: &mut egui::Ui, element: &ElementInfo) {
-        // 为详情视图创建唯一 ID
         ui.push_id("details", |ui| {
-            ui.heading(RichText::new(&element.name).color(Color32::LIGHT_BLUE));
+            ui.heading(
+                RichText::new(&element.name)
+                    .color(Color32::LIGHT_BLUE)
+                    .size(20.0),
+            );
             ui.separator();
 
-            // 基本信息
             ui.push_id("basic_info", |ui| {
                 ui.group(|ui| {
-                    ui.heading("Basic Information");
+                    ui.heading(RichText::new("Basic Information").size(18.0));
                     ui.label(
                         RichText::new(format!("Offset: {}", element.offset))
-                            .color(Color32::LIGHT_GRAY),
+                            .color(Color32::LIGHT_GRAY)
+                            .size(16.0),
                     );
                     ui.label(
-                        RichText::new(format!("Size: {}", element.size)).color(Color32::LIGHT_GRAY),
+                        RichText::new(format!("Size: {}", element.size))
+                            .color(Color32::LIGHT_GRAY)
+                            .size(16.0),
                     );
                 });
             });
 
-            // 属性信息
             if !element.properties.is_empty() {
                 ui.push_id("properties", |ui| {
                     ui.group(|ui| {
-                        ui.heading("Properties");
+                        ui.heading(RichText::new("Properties").size(18.0));
                         egui::Grid::new(ui.make_persistent_id("properties_grid"))
                             .striped(true)
-                            .spacing([40.0, 4.0])
+                            .spacing([40.0, 8.0]) // 增加行间距
                             .show(ui, |ui| {
                                 for (i, (key, value)) in element.properties.iter().enumerate() {
                                     ui.push_id(i, |ui| {
-                                        ui.label(RichText::new(key).color(Color32::LIGHT_GREEN));
-                                        ui.label(value);
+                                        ui.label(
+                                            RichText::new(key)
+                                                .color(Color32::LIGHT_GREEN)
+                                                .size(16.0),
+                                        );
+                                        ui.label(RichText::new(value).size(16.0));
                                         ui.end_row();
                                     });
                                 }
@@ -331,14 +369,13 @@ impl MediaInspectorApp {
                 });
             }
 
-            // 子元素信息
             if !element.children.is_empty() {
                 ui.push_id("children", |ui| {
                     ui.group(|ui| {
-                        ui.heading("Children");
+                        ui.heading(RichText::new("Children").size(18.0));
                         for (i, child) in element.children.iter().enumerate() {
                             ui.push_id(i, |ui| {
-                                ui.label(&child.name);
+                                ui.label(RichText::new(&child.name).size(16.0));
                             });
                         }
                     });
