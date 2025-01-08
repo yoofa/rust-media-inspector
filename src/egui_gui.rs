@@ -321,66 +321,137 @@ impl MediaInspectorApp {
 
     // 显示元素详情（右侧面板）
     fn show_element_details(&self, ui: &mut egui::Ui, element: &ElementInfo) {
-        ui.push_id("details", |ui| {
-            ui.heading(
-                RichText::new(&element.name)
-                    .color(Color32::LIGHT_BLUE)
-                    .size(20.0),
-            );
-            ui.separator();
-
-            ui.push_id("basic_info", |ui| {
-                ui.group(|ui| {
-                    ui.heading(RichText::new("Basic Information").size(18.0));
-                    ui.label(
-                        RichText::new(format!("Offset: {}", element.offset))
-                            .color(Color32::LIGHT_GRAY)
-                            .size(16.0),
-                    );
-                    ui.label(
-                        RichText::new(format!("Size: {}", element.size))
-                            .color(Color32::LIGHT_GRAY)
-                            .size(16.0),
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.push_id("details", |ui| {
+                // 标题
+                ui.vertical_centered(|ui| {
+                    ui.heading(
+                        RichText::new(&element.name)
+                            .color(Color32::LIGHT_BLUE)
+                            .size(24.0),
                     );
                 });
-            });
+                ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(16.0);
 
-            if !element.properties.is_empty() {
-                ui.push_id("properties", |ui| {
+                // 基本信息
+                ui.push_id("basic_info", |ui| {
                     ui.group(|ui| {
-                        ui.heading(RichText::new("Properties").size(18.0));
-                        egui::Grid::new(ui.make_persistent_id("properties_grid"))
-                            .striped(true)
-                            .spacing([40.0, 8.0]) // 增加行间距
+                        ui.heading(RichText::new("Basic Information").size(20.0));
+                        ui.add_space(8.0);
+
+                        // 使用 Grid 来显示基本信息
+                        egui::Grid::new("basic_info_grid")
+                            .num_columns(2)
+                            .spacing([40.0, 8.0])
                             .show(ui, |ui| {
-                                for (i, (key, value)) in element.properties.iter().enumerate() {
-                                    ui.push_id(i, |ui| {
+                                ui.label(RichText::new("Offset").strong().size(16.0));
+                                if let Ok(offset) = element.offset.parse::<u64>() {
+                                    ui.label(
+                                        RichText::new(format!("{:#x} ({} bytes)", offset, offset))
+                                            .monospace()
+                                            .size(16.0),
+                                    );
+                                } else {
+                                    ui.label(RichText::new(&element.offset).monospace().size(16.0));
+                                }
+                                ui.end_row();
+
+                                ui.label(RichText::new("Size").strong().size(16.0));
+                                if let Ok(size) = element.size.parse::<u64>() {
+                                    ui.label(
+                                        RichText::new(format!("{:#x} ({} bytes)", size, size))
+                                            .monospace()
+                                            .size(16.0),
+                                    );
+                                } else {
+                                    ui.label(RichText::new(&element.size).monospace().size(16.0));
+                                }
+                                ui.end_row();
+                            });
+                    });
+                });
+                ui.add_space(16.0);
+
+                // 属性信息
+                if !element.properties.is_empty() {
+                    ui.push_id("properties", |ui| {
+                        ui.group(|ui| {
+                            ui.heading(RichText::new("Properties").size(20.0));
+                            ui.add_space(8.0);
+
+                            // 使用 Grid 来显示属性
+                            egui::Grid::new("properties_grid")
+                                .num_columns(2)
+                                .spacing([40.0, 8.0])
+                                .show(ui, |ui| {
+                                    for (key, value) in &element.properties {
+                                        // 属性名（左列）
                                         ui.label(
                                             RichText::new(key)
                                                 .color(Color32::LIGHT_GREEN)
+                                                .strong()
                                                 .size(16.0),
                                         );
-                                        ui.label(RichText::new(value).size(16.0));
-                                        ui.end_row();
-                                    });
-                                }
-                            });
-                    });
-                });
-            }
 
-            if !element.children.is_empty() {
-                ui.push_id("children", |ui| {
-                    ui.group(|ui| {
-                        ui.heading(RichText::new("Children").size(18.0));
-                        for (i, child) in element.children.iter().enumerate() {
-                            ui.push_id(i, |ui| {
-                                ui.label(RichText::new(&child.name).size(16.0));
-                            });
-                        }
+                                        // 属性值（右列）
+                                        if value.contains('\n') {
+                                            // 多行值使用代码块显示
+                                            egui::Frame::none()
+                                                .fill(Color32::from_rgb(30, 30, 30))
+                                                .inner_margin(8.0)
+                                                .show(ui, |ui| {
+                                                    ui.label(
+                                                        RichText::new(value)
+                                                            .monospace()
+                                                            .size(16.0)
+                                                            .color(Color32::LIGHT_GRAY),
+                                                    );
+                                                });
+                                        } else {
+                                            // 单行值直接显示
+                                            ui.label(
+                                                RichText::new(value)
+                                                    .monospace()
+                                                    .size(16.0)
+                                                    .color(Color32::LIGHT_GRAY),
+                                            );
+                                        }
+                                        ui.end_row();
+                                    }
+                                });
+                        });
                     });
-                });
-            }
+                    ui.add_space(16.0);
+                }
+
+                // 子元素信息
+                if !element.children.is_empty() {
+                    ui.push_id("children", |ui| {
+                        ui.group(|ui| {
+                            ui.heading(RichText::new("Children").size(20.0));
+                            ui.add_space(8.0);
+
+                            for child in &element.children {
+                                ui.horizontal(|ui| {
+                                    ui.label("•"); // 添加项目符号
+                                    ui.label(
+                                        RichText::new(&child.name)
+                                            .size(16.0)
+                                            .color(Color32::LIGHT_GRAY),
+                                    );
+                                    ui.label(
+                                        RichText::new(format!("(size: {} bytes)", child.size))
+                                            .size(14.0)
+                                            .weak(),
+                                    );
+                                });
+                            }
+                        });
+                    });
+                }
+            });
         });
     }
 
