@@ -18,4 +18,7 @@ pub enum MediaError {
 
     #[error("Parse error: {0}")]
     Parse(String),
+
+    #[error("Invalid format: {0}")]
+    InvalidFormat(String),
 }
