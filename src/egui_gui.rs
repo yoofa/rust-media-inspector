@@ -51,6 +51,65 @@ pub fn run_gui() -> i32 {
     .map_or(-1, |_| 0)
 }
 
+pub fn run_gui_with_options(strategy: &str) -> i32 {
+    // 将 strategy 转换为 owned 类型
+    let strategy = strategy.to_string();
+
+    let options = NativeOptions {
+        viewport: ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_title("Media Inspector")
+            .with_drag_and_drop(true),
+        ..Default::default()
+    };
+
+    eframe::run_native(
+        "Media Inspector",
+        options,
+        Box::new(move |_cc| {
+            let mut app = MediaInspectorApp::default();
+            app.detection_strategy = strategy.as_str().into();
+            Box::new(app)
+        }),
+    )
+    .map_or(-1, move |_| 0)
+}
+
+pub fn run_gui_with_file(file_path: &str, strategy: &str) -> i32 {
+    // 将参数转换为 owned 类型
+    let file_path = file_path.to_string();
+    let strategy = strategy.to_string();
+
+    let options = NativeOptions {
+        viewport: ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_title("Media Inspector")
+            .with_drag_and_drop(true),
+        ..Default::default()
+    };
+
+    eframe::run_native(
+        "Media Inspector",
+        options,
+        Box::new(move |_cc| {
+            let mut app = MediaInspectorApp::default();
+            // 设置策略
+            app.detection_strategy = strategy.as_str().into();
+            // 立即开始分析文件
+            let tx = app.tx.clone();
+            let path_str = file_path.clone();
+            let strategy = app.detection_strategy;
+            std::thread::spawn(move || {
+                let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
+                let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
+                tx.send(result).ok();
+            });
+            Box::new(app)
+        }),
+    )
+    .map_or(-1, move |_| 0)
+}
+
 struct MediaInspectorApp {
     media_info: Option<MediaInfo>,
     error_message: Option<String>,

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use detector::{DetectionStrategy, FileFormat, FormatDetector};
+use serde::Serialize;
 
 pub mod detector;
 pub mod isobmff;
@@ -15,7 +16,7 @@ pub trait MediaAnalyzer {
     fn analyze(&self, file_path: &str) -> Result<MediaInfo, Box<dyn Error>>;
 }
 
-#[allow(dead_code)]
+#[derive(Serialize)]
 pub struct MediaInfo {
     pub format: String,
     pub duration: Option<f64>,
@@ -25,7 +26,7 @@ pub struct MediaInfo {
     pub structure: Vec<ElementInfo>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Property {
     pub name: String,
     pub value: String,
@@ -44,8 +45,7 @@ impl Property {
     }
 }
 
-#[derive(Clone)]
-#[allow(dead_code)]
+#[derive(Clone, Serialize)]
 pub struct ElementInfo {
     pub name: String,
     pub offset: String,
@@ -85,7 +85,7 @@ impl ElementInfo {
     }
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize)]
 pub struct VideoStream {
     pub codec: String,
     pub width: u32,
@@ -94,7 +94,7 @@ pub struct VideoStream {
     pub bit_rate: Option<u64>,
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AudioStream {
     pub codec: String,
     pub channels: u8,
