@@ -120,6 +120,7 @@ struct MediaInspectorApp {
     should_exit: bool,
     selected_element: Option<String>,
     detection_strategy: DetectionStrategy,
+    current_file: Option<String>,
 }
 
 impl Default for MediaInspectorApp {
@@ -135,6 +136,7 @@ impl Default for MediaInspectorApp {
             should_exit: false,
             selected_element: None,
             detection_strategy: DetectionStrategy::Auto,
+            current_file: None,
         }
     }
 }
@@ -150,98 +152,60 @@ impl eframe::App for MediaInspectorApp {
         if !ctx.input(|i| i.raw.dropped_files.is_empty()) {
             if let Some(file) = ctx.input(|i| i.raw.dropped_files.first().cloned()) {
                 if let Some(path) = file.path {
-                    let tx = self.tx.clone();
-                    std::thread::spawn(move || {
-                        let analyzer = DefaultAnalyzer::new(true);
-                        match analyzer.analyze(path.to_str().unwrap()) {
-                            Ok(info) => tx.send(Ok(info)),
-                            Err(e) => tx.send(Err(e.to_string())),
-                        }
-                    });
+                    self.analyze_file(path.to_str().unwrap());
                 }
             }
         }
 
-        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                // 文件操作按钮组
-                ui.group(|ui| {
-                    if ui.button(RichText::new("📂 Open").size(16.0)).clicked() {
+        // 菜单栏
+        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open...").clicked() {
                         if let Some(path) = FileDialog::new().pick_file() {
-                            let tx = self.tx.clone();
-                            let path_str = path.to_str().unwrap().to_string();
-                            let strategy = self.detection_strategy;
-
-                            // 在新线程中分析文件
-                            std::thread::spawn(move || {
-                                let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
-                                let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
-                                tx.send(result).ok();
-                            });
+                            self.analyze_file(path.to_str().unwrap());
+                            ui.close_menu();
                         }
                     }
-                    if ui.button(RichText::new("🔄 Reload").size(16.0)).clicked() {
-                        // ... 重新加载当前文件 ...
+                    if ui.button("Exit").clicked() {
+                        self.should_exit = true;
+                        ui.close_menu();
                     }
                 });
 
-                ui.separator();
+                ui.menu_button("View", |ui| {
+                    ui.menu_button("Detection Strategy", |ui| {
+                        let strategies = [
+                            (DetectionStrategy::Auto, "Auto"),
+                            (DetectionStrategy::Extension, "Extension"),
+                            (DetectionStrategy::Content, "Content"),
+                        ];
 
-                // 视图控制按钮组
-                ui.group(|ui| {
-                    if ui
-                        .button(RichText::new("🔍 Expand All").size(16.0))
-                        .clicked()
-                    {
-                        if let Some(info) = &self.media_info {
-                            let mut paths = std::collections::HashSet::new();
-                            Self::collect_all_paths(&info.structure, &mut paths);
-                            self.expanded_nodes = paths;
+                        for (strategy, label) in strategies {
+                            if ui
+                                .selectable_label(
+                                    self.detection_strategy == strategy,
+                                    RichText::new(label).size(16.0),
+                                )
+                                .clicked()
+                            {
+                                self.detection_strategy = strategy;
+                                // 克隆路径，避免借用冲突
+                                if let Some(path) = self.current_file.clone() {
+                                    self.analyze_file(&path);
+                                }
+                                ui.close_menu();
+                            }
                         }
-                    }
-                    if ui
-                        .button(RichText::new("🔽 Collapse All").size(16.0))
-                        .clicked()
-                    {
-                        self.expanded_nodes.clear();
-                    }
+                    });
                 });
 
-                ui.separator();
-
-                // 策略选择
-                ui.group(|ui| {
-                    ui.label(RichText::new("Detection:").size(16.0));
-                    egui::ComboBox::from_id_source("strategy")
-                        .selected_text(format!("{:?}", self.detection_strategy))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                &mut self.detection_strategy,
-                                DetectionStrategy::Auto,
-                                RichText::new("Auto").size(16.0),
-                            );
-                            ui.selectable_value(
-                                &mut self.detection_strategy,
-                                DetectionStrategy::Extension,
-                                RichText::new("Extension").size(16.0),
-                            );
-                            ui.selectable_value(
-                                &mut self.detection_strategy,
-                                DetectionStrategy::Content,
-                                RichText::new("Content").size(16.0),
-                            );
-                        });
-                });
-
-                // 搜索框
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.search_text)
-                            .hint_text("🔍 Search...")
-                            .desired_width(200.0)
-                            .font(egui::TextStyle::Monospace),
-                    );
-                });
+                // 显示当前文件名
+                if let Some(path) = &self.current_file {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(RichText::new(path).size(14.0).color(Color32::LIGHT_GRAY));
+                    });
+                }
             });
         });
 
@@ -272,60 +236,6 @@ impl eframe::App for MediaInspectorApp {
                     }
                 });
         }
-
-        // 添加顶部菜单栏
-        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open").clicked() {
-                        ui.close_menu();
-                        let tx = self.tx.clone();
-                        std::thread::spawn(move || {
-                            if let Some(path) = FileDialog::new()
-                                .add_filter("Media Files", &["mp4", "mov", "m4a"])
-                                .pick_file()
-                            {
-                                let analyzer = DefaultAnalyzer::new(true);
-                                match analyzer.analyze(path.to_str().unwrap()) {
-                                    Ok(info) => tx.send(Ok(info)),
-                                    Err(e) => tx.send(Err(e.to_string())),
-                                }
-                            } else {
-                                Ok(())
-                            }
-                        });
-                    }
-                    if ui.button("Exit").clicked() {
-                        self.should_exit = true;
-                        ui.close_menu();
-                    }
-                });
-
-                ui.menu_button("View", |ui| {
-                    if ui.button("Expand All").clicked() {
-                        if let Some(info) = &self.media_info {
-                            let mut paths = std::collections::HashSet::new();
-                            for element in &info.structure {
-                                Self::collect_paths(element, "", &mut paths);
-                            }
-                            self.expanded_nodes = paths;
-                        }
-                        ui.close_menu();
-                    }
-                    if ui.button("Collapse All").clicked() {
-                        self.expanded_nodes.clear();
-                        ui.close_menu();
-                    }
-                });
-
-                ui.menu_button("Help", |ui| {
-                    if ui.button("About").clicked() {
-                        // TODO: 显示关于对话框
-                        ui.close_menu();
-                    }
-                });
-            });
-        });
 
         // 使用 SidePanel 和 CentralPanel 创建双栏布局
         egui::SidePanel::left("tree_panel")
@@ -813,5 +723,19 @@ impl MediaInspectorApp {
             .children
             .iter()
             .any(|child| self.should_show_element(child))
+    }
+
+    // 添加辅助方法用于文件分析
+    fn analyze_file(&mut self, path: &str) {
+        let tx = self.tx.clone();
+        let path_str = path.to_string();
+        let strategy = self.detection_strategy;
+        self.current_file = Some(path_str.clone());
+
+        std::thread::spawn(move || {
+            let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
+            let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
+            tx.send(result).ok();
+        });
     }
 }
