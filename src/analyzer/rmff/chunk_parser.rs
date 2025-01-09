@@ -1,4 +1,6 @@
-use super::chunks::{Chunk, ChunkData, ChunkType};
+use super::chunks::{
+    Chunk, ChunkData, ChunkType, ContChunk, DataChunk, IndexEntry, IndxChunk, MdprChunk, PropChunk,
+};
 use crate::error::MediaError;
 use crate::reader::Reader;
 

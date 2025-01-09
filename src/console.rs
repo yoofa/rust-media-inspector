@@ -1,4 +1,14 @@
+use crate::analyzer::{DefaultAnalyzer, MediaAnalyzer, MediaInfo};
+use crate::analyzer::detector::DetectionStrategy;
 use colored::*;
+
+pub fn analyze_file(
+    file_path: &str,
+    strategy: DetectionStrategy,
+) -> Result<MediaInfo, Box<dyn std::error::Error>> {
+    let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
+    analyzer.analyze(file_path)
+}
 
 pub fn print_tree(info: &crate::analyzer::MediaInfo) {
     println!("Format: {}", info.format.green());

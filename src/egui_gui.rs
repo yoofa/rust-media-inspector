@@ -1,8 +1,10 @@
 use eframe::{egui, NativeOptions};
 use egui::{Color32, RichText, ViewportBuilder};
 use rfd::FileDialog;
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
+use crate::analyzer::detector::DetectionStrategy;
 use crate::analyzer::{DefaultAnalyzer, ElementInfo, MediaAnalyzer, MediaInfo};
 
 pub fn run_gui() -> i32 {
@@ -59,6 +61,7 @@ struct MediaInspectorApp {
     expanded_nodes: std::collections::HashSet<String>,
     should_exit: bool,
     selected_element: Option<String>,
+    detection_strategy: DetectionStrategy,
 }
 
 impl Default for MediaInspectorApp {
@@ -73,6 +76,7 @@ impl Default for MediaInspectorApp {
             expanded_nodes: std::collections::HashSet::new(),
             should_exit: false,
             selected_element: None,
+            detection_strategy: DetectionStrategy::Auto,
         }
     }
 }
@@ -100,7 +104,57 @@ impl eframe::App for MediaInspectorApp {
             }
         }
 
-        // 检查后台任务结果
+        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                // 打开文件按钮
+                if ui.button("Open File").clicked() {
+                    if let Some(path) = FileDialog::new().pick_file() {
+                        let tx = self.tx.clone();
+                        let path_str = path.to_str().unwrap().to_string();
+                        let strategy = self.detection_strategy;
+
+                        // 在新线程中分析文件
+                        std::thread::spawn(move || {
+                            let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
+                            let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
+                            tx.send(result).ok();
+                        });
+                    }
+                }
+
+                // 策略选择下拉菜单
+                ui.add_space(16.0);
+                egui::ComboBox::from_label("Detection Strategy")
+                    .selected_text(format!("{:?}", self.detection_strategy))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.detection_strategy,
+                            DetectionStrategy::Auto,
+                            "Auto",
+                        );
+                        ui.selectable_value(
+                            &mut self.detection_strategy,
+                            DetectionStrategy::Extension,
+                            "Extension",
+                        );
+                        ui.selectable_value(
+                            &mut self.detection_strategy,
+                            DetectionStrategy::Content,
+                            "Content",
+                        );
+                    });
+
+                // 搜索框
+                ui.add_space(16.0);
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.search_text)
+                        .hint_text("Search...")
+                        .desired_width(200.0),
+                );
+            });
+        });
+
+        // 检查分析结果
         if let Ok(result) = self.rx.try_recv() {
             match result {
                 Ok(info) => {
@@ -108,9 +162,24 @@ impl eframe::App for MediaInspectorApp {
                     self.error_message = None;
                 }
                 Err(err) => {
+                    self.media_info = None;
                     self.error_message = Some(err);
                 }
             }
+        }
+
+        // 显示错误信息
+        if let Some(error) = &self.error_message {
+            let error_message = error.clone();
+            egui::Window::new("Error")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.colored_label(Color32::RED, &error_message);
+                    if ui.button("Close").clicked() {
+                        self.error_message = None;
+                    }
+                });
         }
 
         // 添加顶部菜单栏

@@ -1,8 +1,14 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use detector::{DetectionStrategy, FileFormat, FormatDetector};
+
+pub mod detector;
 pub mod isobmff;
+pub mod rmff;
+
 use isobmff::IsobmffAnalyzer;
+use rmff::RmffAnalyzer;
 
 #[allow(dead_code)]
 pub trait MediaAnalyzer {
@@ -99,24 +105,40 @@ pub struct AudioStream {
 #[allow(dead_code)]
 pub struct DefaultAnalyzer {
     debug: bool,
+    detector: FormatDetector,
 }
 
-#[allow(dead_code)]
 impl DefaultAnalyzer {
     pub fn new(debug: bool) -> Self {
-        Self { debug }
+        Self {
+            debug,
+            detector: FormatDetector::new(DetectionStrategy::Auto),
+        }
+    }
+
+    pub fn with_strategy(debug: bool, strategy: DetectionStrategy) -> Self {
+        Self {
+            debug,
+            detector: FormatDetector::new(strategy),
+        }
     }
 }
 
 impl MediaAnalyzer for DefaultAnalyzer {
     fn analyze(&self, file_path: &str) -> Result<MediaInfo, Box<dyn Error>> {
-        // Try to detect file format and use appropriate analyzer
-        if let Ok(mut analyzer) = IsobmffAnalyzer::new(file_path) {
-            analyzer.set_debug(self.debug);
-            return Ok(analyzer.analyze()?);
-        }
-        // TODO: Add more format analyzers here
+        let format = self.detector.detect_format(file_path)?;
 
-        Err("Unsupported format".into())
+        match format {
+            FileFormat::RealMedia => {
+                let mut analyzer = RmffAnalyzer::new(file_path)?;
+                analyzer.set_debug(self.debug);
+                Ok(analyzer.analyze()?)
+            }
+            FileFormat::Isobmff => {
+                let mut analyzer = IsobmffAnalyzer::new(file_path)?;
+                analyzer.set_debug(self.debug);
+                Ok(analyzer.analyze()?)
+            }
+        }
     }
 }

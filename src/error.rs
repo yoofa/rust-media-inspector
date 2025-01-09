@@ -21,4 +21,7 @@ pub enum MediaError {
 
     #[error("Invalid format: {0}")]
     InvalidFormat(String),
+
+    #[error("Unsupported format: {0}")]
+    UnsupportedFormat(String),
 }

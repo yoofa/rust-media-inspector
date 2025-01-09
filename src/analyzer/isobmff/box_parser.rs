@@ -67,6 +67,15 @@ impl BoxParser {
             );
         }
 
+        // 在解析 box 时会验证 box 大小和类型
+        if size < 8 {
+            return Err(MediaError::InvalidBoxSize);
+        }
+
+        if !is_valid_box_type(&box_type) {
+            return Err(MediaError::InvalidBoxType(format!("{:?}", box_type)));
+        }
+
         // Parse box data based on type
         let data = match box_type.as_str() {
             "ftyp" => self.parse_ftyp(actual_size - header_size)?,
@@ -887,4 +896,15 @@ impl BoxParser {
 
         Ok(DataReferenceBox::new(version, flags, entries))
     }
+}
+
+fn is_valid_box_type(box_type: &BoxType) -> bool {
+    // 添加所有有效的 box 类型
+    matches!(
+        box_type.as_str(),
+        "ftyp" | "moov" | "mvhd" | "trak" | "tkhd" | "mdia" | "mdhd" | "hdlr" |
+        "minf" | "vmhd" | "smhd" | "dinf" | "dref" | "stbl" | "stsd" | "stts" |
+        "stsc" | "stsz" | "stco" | "mdat" | "free" | "skip" | "wide" | "edts" |
+        "elst"
+    )
 }

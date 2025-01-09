@@ -1,4 +1,5 @@
-use crate::analyzer::{ElementInfo, MediaInfo, Property};
+use crate::analyzer::rmff::chunks::ChunkInfo;
+use crate::analyzer::{ElementInfo, MediaInfo};
 use crate::error::MediaError;
 use crate::reader::Reader;
 use std::fs::File;
@@ -48,8 +49,6 @@ impl RmffAnalyzer {
                     chunk.size(),
                 );
                 element.readable_value = chunk.description().to_string();
-
-                // 让chunk自己填充属性
                 chunk.fill_properties(&mut element.properties);
                 element.children = Self::convert_to_elements(chunk.children());
                 element
