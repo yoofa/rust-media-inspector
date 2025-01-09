@@ -1,3 +1,4 @@
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct SampleToChunkBox {
     version: u8,
@@ -25,23 +26,38 @@ impl SampleToChunkBox {
         "Sample To Chunk Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("entry_count".to_string(), self.entries.len().to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "entry_count",
+            self.entries.len().to_string(),
+            None::<String>,
+        ));
 
         for (i, entry) in self.entries.iter().enumerate() {
-            properties.push((
-                format!("entry[{}].first_chunk", i),
+            properties.push(Property::new(
+                &format!("entry[{}].first_chunk", i),
                 entry.first_chunk.to_string(),
+                None::<String>,
             ));
-            properties.push((
-                format!("entry[{}].samples_per_chunk", i),
+            properties.push(Property::new(
+                &format!("entry[{}].samples_per_chunk", i),
                 entry.samples_per_chunk.to_string(),
+                None::<String>,
             ));
-            properties.push((
-                format!("entry[{}].sample_description_index", i),
+            properties.push(Property::new(
+                &format!("entry[{}].sample_description_index", i),
                 entry.sample_description_index.to_string(),
+                None::<String>,
             ));
         }
     }

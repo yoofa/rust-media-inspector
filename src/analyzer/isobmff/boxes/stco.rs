@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub struct ChunkOffsetBox {
     version: u8,
@@ -18,19 +20,36 @@ impl ChunkOffsetBox {
         "Chunk Offset Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("entry_count".to_string(), self.offsets.len().to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "entry_count",
+            self.offsets.len().to_string(),
+            None::<String>,
+        ));
 
         // Only show first few offsets to avoid overwhelming output
         for (i, offset) in self.offsets.iter().take(5).enumerate() {
-            properties.push((format!("offset[{}]", i), format!("0x{:x}", offset)));
+            properties.push(Property::new(
+                &format!("offset[{}]", i),
+                format!("0x{:x}", offset),
+                None::<String>,
+            ));
         }
         if self.offsets.len() > 5 {
-            properties.push((
-                "...".to_string(),
+            properties.push(Property::new(
+                "...",
                 format!("{} more", self.offsets.len() - 5),
+                None::<String>,
             ));
         }
     }

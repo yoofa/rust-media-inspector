@@ -1,3 +1,4 @@
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct FileTypeBox {
     major_brand: String,
@@ -18,15 +19,21 @@ impl FileTypeBox {
         "File Type Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("major brand".to_string(), self.major_brand.clone()));
-        properties.push((
-            "minor version".to_string(),
-            format!("{}", self.minor_version),
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "major brand",
+            self.major_brand.clone(),
+            None::<String>,
         ));
-        properties.push((
-            "compatible brands".to_string(),
+        properties.push(Property::new(
+            "minor version",
+            format!("{}", self.minor_version),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "compatible brands",
             self.compatible_brands.join(", "),
+            None::<String>,
         ));
     }
 }

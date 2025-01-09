@@ -1,5 +1,5 @@
 use crate::analyzer::isobmff::types::Mp4DateTime;
-
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct MediaHeaderBox {
     version: u8,
@@ -36,16 +36,41 @@ impl MediaHeaderBox {
         "Media Header Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("creation_time".to_string(), self.creation_time.to_string()));
-        properties.push((
-            "modification_time".to_string(),
-            self.modification_time.to_string(),
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
         ));
-        properties.push(("timescale".to_string(), self.timescale.to_string()));
-        properties.push(("duration".to_string(), self.duration.to_string()));
-        properties.push(("language".to_string(), self.language.clone()));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "creation_time",
+            self.creation_time.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "modification_time",
+            self.modification_time.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "timescale",
+            self.timescale.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "duration",
+            self.duration.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "language",
+            self.language.clone(),
+            None::<String>,
+        ));
     }
 }

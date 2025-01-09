@@ -1,3 +1,4 @@
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct VideoMediaHeaderBox {
     version: u8,
@@ -20,16 +21,29 @@ impl VideoMediaHeaderBox {
         "Video Media Header Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("graphics_mode".to_string(), self.graphics_mode.to_string()));
-        properties.push((
-            "op_color".to_string(),
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "graphics_mode",
+            self.graphics_mode.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "op_color",
             format!(
                 "[{}, {}, {}]",
                 self.op_color[0], self.op_color[1], self.op_color[2]
             ),
+            None::<String>,
         ));
     }
 }

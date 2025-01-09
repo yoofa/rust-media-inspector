@@ -1,5 +1,5 @@
 use crate::analyzer::isobmff::types::{Fixed16_16, Matrix, Mp4DateTime};
-
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct TrackHeaderBox {
     version: u8,
@@ -51,27 +51,66 @@ impl TrackHeaderBox {
         "Track Header Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), format!("{}", self.version)));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push((
-            "creation time".to_string(),
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "creation time",
             format!("{}", self.creation_time),
+            None::<String>,
         ));
-        properties.push((
-            "modification time".to_string(),
+        properties.push(Property::new(
+            "modification time",
             format!("{}", self.modification_time),
+            None::<String>,
         ));
-        properties.push(("track ID".to_string(), format!("{}", self.track_id)));
-        properties.push(("duration".to_string(), format!("{}", self.duration)));
-        properties.push(("layer".to_string(), format!("{}", self.layer)));
-        properties.push((
-            "alternate group".to_string(),
+        properties.push(Property::new(
+            "track ID",
+            format!("{}", self.track_id),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "duration",
+            format!("{}", self.duration),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "layer",
+            format!("{}", self.layer),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "alternate group",
             format!("{}", self.alternate_group),
+            None::<String>,
         ));
-        properties.push(("volume".to_string(), format!("{}", self.volume.as_f32())));
-        properties.push(("matrix".to_string(), format!("{:?}", self.matrix.values)));
-        properties.push(("width".to_string(), format!("{}", self.width.as_f32())));
-        properties.push(("height".to_string(), format!("{}", self.height.as_f32())));
+        properties.push(Property::new(
+            "volume",
+            format!("{}", self.volume.as_f32()),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "matrix",
+            format!("{:?}", self.matrix.values),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "width",
+            format!("{}", self.width.as_f32()),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "height",
+            format!("{}", self.height.as_f32()),
+            None::<String>,
+        ));
     }
 }

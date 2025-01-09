@@ -415,24 +415,24 @@ impl MediaInspectorApp {
                                 .num_columns(2)
                                 .spacing([40.0, 8.0])
                                 .show(ui, |ui| {
-                                    for (key, value) in &element.properties {
+                                    for prop in &element.properties {
                                         // 属性名（左列）
                                         ui.label(
-                                            RichText::new(key)
+                                            RichText::new(&prop.name)
                                                 .color(Color32::LIGHT_GREEN)
                                                 .strong()
                                                 .size(16.0),
                                         );
 
                                         // 属性值（右列）
-                                        if value.contains('\n') {
+                                        if prop.value.contains('\n') {
                                             // 多行值使用代码块显示
                                             egui::Frame::none()
                                                 .fill(Color32::from_rgb(30, 30, 30))
                                                 .inner_margin(8.0)
                                                 .show(ui, |ui| {
                                                     ui.label(
-                                                        RichText::new(value)
+                                                        RichText::new(&prop.value)
                                                             .monospace()
                                                             .size(16.0)
                                                             .color(Color32::LIGHT_GRAY),
@@ -441,7 +441,7 @@ impl MediaInspectorApp {
                                         } else {
                                             // 单行值直接显示
                                             ui.label(
-                                                RichText::new(value)
+                                                RichText::new(&prop.value)
                                                     .monospace()
                                                     .size(16.0)
                                                     .color(Color32::LIGHT_GRAY),

@@ -48,14 +48,15 @@ fn print_structure(items: &[crate::analyzer::ElementInfo], prefix: &str, depth: 
 
         // 再打印其他属性，使用暗灰色
         const MAX_PROPERTIES: usize = 12;
-        let other_props: Vec<_> = item
-            .properties
-            .iter()
-            .filter(|(key, _)| key != "size" && key != "offset")
-            .collect();
+        let other_props: Vec<_> = item.properties.iter().collect();
 
-        for (key, value) in other_props.iter().take(MAX_PROPERTIES) {
-            println!("{}{}:  {}", prop_prefix, key, value.black());
+        for prop in other_props.iter().take(MAX_PROPERTIES) {
+            println!(
+                "{}{}:  {}",
+                prop_prefix,
+                prop.name,
+                prop.readable_value.black()
+            );
         }
 
         if other_props.len() > MAX_PROPERTIES {

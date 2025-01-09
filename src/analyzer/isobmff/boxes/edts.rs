@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub struct EditBox {}
 
@@ -10,7 +12,5 @@ impl EditBox {
         "Edit Box"
     }
 
-    pub fn fill_properties(&self, _properties: &mut Vec<(String, String)>) {
-        // Edit box itself doesn't have properties
-    }
+    pub fn fill_properties(&self, _properties: &mut Vec<Property>) {}
 }

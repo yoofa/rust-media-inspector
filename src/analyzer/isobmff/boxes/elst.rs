@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub struct EditListEntry {
     pub segment_duration: u32,
@@ -42,31 +44,43 @@ impl EditListBox {
         "Edit List Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("entry_count".to_string(), self.entries.len().to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new("version", self.version, None::<String>));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "entry_count",
+            self.entries.len().to_string(),
+            None::<String>,
+        ));
 
         // 只显示前几个条目
         for (i, entry) in self.entries.iter().take(5).enumerate() {
-            properties.push((
-                format!("entry[{}].duration", i),
+            properties.push(Property::new(
+                &format!("entry[{}].duration", i),
                 entry.segment_duration.to_string(),
+                None::<String>,
             ));
-            properties.push((
-                format!("entry[{}].media_time", i),
+            properties.push(Property::new(
+                &format!("entry[{}].media_time", i),
                 entry.media_time.to_string(),
+                None::<String>,
             ));
-            properties.push((
-                format!("entry[{}].media_rate", i),
+            properties.push(Property::new(
+                &format!("entry[{}].media_rate", i),
                 format!("{}.{}", entry.media_rate, entry.media_rate_fraction),
+                None::<String>,
             ));
         }
 
         if self.entries.len() > 5 {
-            properties.push((
-                "...".to_string(),
+            properties.push(Property::new(
+                "...",
                 format!("{} more entries", self.entries.len() - 5),
+                None::<String>,
             ));
         }
     }
