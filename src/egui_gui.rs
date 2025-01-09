@@ -1,7 +1,6 @@
 use eframe::{egui, NativeOptions};
 use egui::{Color32, RichText, ViewportBuilder};
 use rfd::FileDialog;
-use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::analyzer::detector::DetectionStrategy;
@@ -106,51 +105,84 @@ impl eframe::App for MediaInspectorApp {
 
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                // 打开文件按钮
-                if ui.button("Open File").clicked() {
-                    if let Some(path) = FileDialog::new().pick_file() {
-                        let tx = self.tx.clone();
-                        let path_str = path.to_str().unwrap().to_string();
-                        let strategy = self.detection_strategy;
+                // 文件操作按钮组
+                ui.group(|ui| {
+                    if ui.button(RichText::new("📂 Open").size(16.0)).clicked() {
+                        if let Some(path) = FileDialog::new().pick_file() {
+                            let tx = self.tx.clone();
+                            let path_str = path.to_str().unwrap().to_string();
+                            let strategy = self.detection_strategy;
 
-                        // 在新线程中分析文件
-                        std::thread::spawn(move || {
-                            let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
-                            let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
-                            tx.send(result).ok();
-                        });
+                            // 在新线程中分析文件
+                            std::thread::spawn(move || {
+                                let analyzer = DefaultAnalyzer::with_strategy(true, strategy);
+                                let result = analyzer.analyze(&path_str).map_err(|e| e.to_string());
+                                tx.send(result).ok();
+                            });
+                        }
                     }
-                }
+                    if ui.button(RichText::new("🔄 Reload").size(16.0)).clicked() {
+                        // ... 重新加载当前文件 ...
+                    }
+                });
 
-                // 策略选择下拉菜单
-                ui.add_space(16.0);
-                egui::ComboBox::from_label("Detection Strategy")
-                    .selected_text(format!("{:?}", self.detection_strategy))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.detection_strategy,
-                            DetectionStrategy::Auto,
-                            "Auto",
-                        );
-                        ui.selectable_value(
-                            &mut self.detection_strategy,
-                            DetectionStrategy::Extension,
-                            "Extension",
-                        );
-                        ui.selectable_value(
-                            &mut self.detection_strategy,
-                            DetectionStrategy::Content,
-                            "Content",
-                        );
-                    });
+                ui.separator();
+
+                // 视图控制按钮组
+                ui.group(|ui| {
+                    if ui
+                        .button(RichText::new("🔍 Expand All").size(16.0))
+                        .clicked()
+                    {
+                        if let Some(info) = &self.media_info {
+                            let mut paths = std::collections::HashSet::new();
+                            Self::collect_all_paths(&info.structure, &mut paths);
+                            self.expanded_nodes = paths;
+                        }
+                    }
+                    if ui
+                        .button(RichText::new("🔽 Collapse All").size(16.0))
+                        .clicked()
+                    {
+                        self.expanded_nodes.clear();
+                    }
+                });
+
+                ui.separator();
+
+                // 策略选择
+                ui.group(|ui| {
+                    ui.label(RichText::new("Detection:").size(16.0));
+                    egui::ComboBox::from_id_source("strategy")
+                        .selected_text(format!("{:?}", self.detection_strategy))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.detection_strategy,
+                                DetectionStrategy::Auto,
+                                RichText::new("Auto").size(16.0),
+                            );
+                            ui.selectable_value(
+                                &mut self.detection_strategy,
+                                DetectionStrategy::Extension,
+                                RichText::new("Extension").size(16.0),
+                            );
+                            ui.selectable_value(
+                                &mut self.detection_strategy,
+                                DetectionStrategy::Content,
+                                RichText::new("Content").size(16.0),
+                            );
+                        });
+                });
 
                 // 搜索框
-                ui.add_space(16.0);
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.search_text)
-                        .hint_text("Search...")
-                        .desired_width(200.0),
-                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.search_text)
+                            .hint_text("🔍 Search...")
+                            .desired_width(200.0)
+                            .font(egui::TextStyle::Monospace),
+                    );
+                });
             });
         });
 
@@ -597,5 +629,130 @@ impl MediaInspectorApp {
         for child in &element.children {
             Self::collect_paths(child, &path, paths);
         }
+    }
+
+    fn collect_all_paths(elements: &[ElementInfo], paths: &mut std::collections::HashSet<String>) {
+        for element in elements {
+            Self::collect_paths(element, "", paths);
+        }
+    }
+
+    fn display_structure(&mut self, ui: &mut egui::Ui, elements: &[ElementInfo]) {
+        for element in elements {
+            let id = format!("{}_{}", element.name, element.offset);
+            let is_expanded = self.expanded_nodes.contains(&id);
+
+            // 构建显示文本
+            let mut text = element.name.clone();
+            if !element.readable_value.is_empty() {
+                text = format!("{} ({})", text, element.readable_value);
+            }
+
+            // 添加大小信息
+            if let Ok(size) = element.size.parse::<u64>() {
+                text = format!("{} [{} bytes]", text, size);
+            }
+
+            let header = egui::CollapsingHeader::new(RichText::new(text).size(16.0))
+                .id_source(&id)
+                .default_open(is_expanded)
+                .show(ui, |ui| {
+                    // 显示基本信息
+                    ui.add_space(4.0);
+                    egui::Grid::new(&format!("grid_{}", id))
+                        .num_columns(2)
+                        .spacing([40.0, 4.0])
+                        .show(ui, |ui| {
+                            // 显示偏移量
+                            ui.label(RichText::new("Offset:").strong());
+                            if let Ok(offset) = element.offset.parse::<u64>() {
+                                ui.label(
+                                    RichText::new(format!("0x{:x} ({} bytes)", offset, offset))
+                                        .monospace(),
+                                );
+                            } else {
+                                ui.label(RichText::new(&element.offset).monospace());
+                            }
+                            ui.end_row();
+
+                            // 显示大小
+                            ui.label(RichText::new("Size:").strong());
+                            if let Ok(size) = element.size.parse::<u64>() {
+                                ui.label(
+                                    RichText::new(format!("0x{:x} ({} bytes)", size, size))
+                                        .monospace(),
+                                );
+                            } else {
+                                ui.label(RichText::new(&element.size).monospace());
+                            }
+                            ui.end_row();
+
+                            // 显示属性
+                            for prop in &element.properties {
+                                ui.label(RichText::new(&prop.name).strong());
+                                if prop.value != prop.readable_value {
+                                    ui.label(
+                                        RichText::new(format!(
+                                            "{} ({})",
+                                            prop.value, prop.readable_value
+                                        ))
+                                        .monospace(),
+                                    );
+                                } else {
+                                    ui.label(RichText::new(&prop.value).monospace());
+                                }
+                                ui.end_row();
+                            }
+                        });
+
+                    ui.add_space(8.0);
+
+                    // 递归显示子元素
+                    if !element.children.is_empty() {
+                        ui.group(|ui| {
+                            self.display_structure(ui, &element.children);
+                        });
+                    }
+                });
+
+            // 更新展开状态
+            if header.header_response.clicked() {
+                if is_expanded {
+                    self.expanded_nodes.remove(&id);
+                } else {
+                    self.expanded_nodes.insert(id);
+                }
+            }
+        }
+    }
+
+    // 添加搜索过滤功能
+    fn should_show_element(&self, element: &ElementInfo) -> bool {
+        if self.search_text.is_empty() {
+            return true;
+        }
+
+        let search_text = self.search_text.to_lowercase();
+
+        // 检查名称
+        if element.name.to_lowercase().contains(&search_text) {
+            return true;
+        }
+
+        // 检查属性
+        for prop in &element.properties {
+            if prop.name.to_lowercase().contains(&search_text)
+                || prop.value.to_lowercase().contains(&search_text)
+                || prop.readable_value.to_lowercase().contains(&search_text)
+            {
+                return true;
+            }
+        }
+
+        // 递归检查子元素
+        element
+            .children
+            .iter()
+            .any(|child| self.should_show_element(child))
     }
 }

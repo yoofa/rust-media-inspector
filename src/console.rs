@@ -1,8 +1,30 @@
-use crate::analyzer::{DefaultAnalyzer, MediaAnalyzer, MediaInfo};
 use crate::analyzer::detector::DetectionStrategy;
+use crate::analyzer::{DefaultAnalyzer, MediaAnalyzer, MediaInfo};
+use clap::ArgMatches;
 use colored::*;
 
-pub fn analyze_file(
+pub fn run_console(matches: &ArgMatches) -> i32 {
+    let file_path = matches.get_one::<String>("FILE").unwrap();
+    let strategy = match matches.get_one::<String>("strategy").unwrap().as_str() {
+        "auto" => DetectionStrategy::Auto,
+        "extension" => DetectionStrategy::Extension,
+        "content" => DetectionStrategy::Content,
+        _ => DetectionStrategy::Auto,
+    };
+
+    match analyze_file(file_path, strategy) {
+        Ok(info) => {
+            print_tree(&info);
+            0
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            1
+        }
+    }
+}
+
+fn analyze_file(
     file_path: &str,
     strategy: DetectionStrategy,
 ) -> Result<MediaInfo, Box<dyn std::error::Error>> {

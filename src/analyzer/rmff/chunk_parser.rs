@@ -41,7 +41,7 @@ impl ChunkParser {
         }
 
         // 读取文件大小
-        let file_size = self.reader.read_u32()? as u64;
+        let _file_size = self.reader.read_u32()? as u64;
 
         // 读取所有chunks
         while let Ok((size, chunk_type, offset)) = self.read_chunk_header() {

@@ -4,7 +4,6 @@ mod egui_gui;
 mod error;
 mod reader;
 
-use analyzer::{DefaultAnalyzer, MediaAnalyzer};
 use clap::Command;
 
 fn main() {
@@ -36,17 +35,6 @@ fn main() {
     if matches.get_flag("gui") {
         std::process::exit(egui_gui::run_gui());
     } else {
-        let file_path = matches.get_one::<String>("FILE").unwrap();
-        let strategy = match matches.get_one::<String>("strategy").unwrap().as_str() {
-            "auto" => analyzer::detector::DetectionStrategy::Auto,
-            "extension" => analyzer::detector::DetectionStrategy::Extension,
-            "content" => analyzer::detector::DetectionStrategy::Content,
-            _ => analyzer::detector::DetectionStrategy::Auto,
-        };
-
-        match console::analyze_file(file_path, strategy) {
-            Ok(info) => console::print_tree(&info),
-            Err(e) => eprintln!("Error: {}", e),
-        }
+        std::process::exit(console::run_console(&matches));
     }
 }
