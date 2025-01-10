@@ -236,6 +236,16 @@ impl eframe::App for MediaInspectorApp {
 }
 
 impl MediaInspectorApp {
+    // 添加颜色数组作为常量
+    const LEVEL_COLORS: [Color32; 6] = [
+        Color32::from_rgb(87, 204, 153),  // 浅绿
+        Color32::from_rgb(92, 179, 255),  // 浅蓝
+        Color32::from_rgb(255, 179, 71),  // 橙色
+        Color32::from_rgb(255, 145, 164), // 粉红
+        Color32::from_rgb(179, 157, 219), // 紫色
+        Color32::from_rgb(255, 214, 102), // 金黄
+    ];
+
     // 显示元素树（左侧面板）
     fn show_element_tree(
         ui: &mut egui::Ui,
@@ -248,9 +258,7 @@ impl MediaInspectorApp {
         expanded_nodes: &mut std::collections::HashSet<String>,
         selected_element: &mut Option<String>,
     ) {
-        // 显示路径用于UI显示和选择
         let display_path = format!("{}/{}", parent_path, element.name);
-        // 唯一路径用于内部标识，包含索引信息
         let unique_path = format!("{}#{}_{}", parent_path, parent_index, index);
 
         let matches_search = search_text.is_empty()
@@ -265,13 +273,24 @@ impl MediaInspectorApp {
 
         let indent = "    ".repeat(depth);
         let is_selected = Some(&display_path) == selected_element.as_ref();
-        let text = RichText::new(format!("{}{}", indent, element.name))
-            .size(16.0)
-            .color(if is_selected {
-                Color32::YELLOW
-            } else {
-                Color32::WHITE
-            });
+
+        // 根据深度选择颜色
+        let color = if is_selected {
+            Color32::YELLOW
+        } else if !search_text.is_empty() && matches_search {
+            Color32::from_rgb(255, 128, 0) // 搜索匹配项使用醒目的橙色
+        } else {
+            Self::LEVEL_COLORS[depth % Self::LEVEL_COLORS.len()]
+        };
+
+        // 简化显示文本，移除图标
+        let display_text = if element.children.is_empty() {
+            format!("{}{}", indent, element.name)
+        } else {
+            format!("{}{} ({})", indent, element.name, element.children.len())
+        };
+
+        let text = RichText::new(display_text).size(16.0).color(color);
 
         let base_id = ui.make_persistent_id(&unique_path);
 
@@ -282,6 +301,7 @@ impl MediaInspectorApp {
             }
         } else {
             let is_expanded = expanded_nodes.contains(&unique_path);
+
             let header = egui::CollapsingHeader::new(text)
                 .id_source(base_id)
                 .default_open(false)
@@ -306,10 +326,12 @@ impl MediaInspectorApp {
             });
 
             let header_rect = header_response.header_response.rect;
+            let is_clicked = header_response.header_response.clicked();
+
             let arrow_rect =
                 egui::Rect::from_min_size(header_rect.min, egui::vec2(20.0, header_rect.height()));
 
-            if header_response.header_response.clicked() {
+            if is_clicked {
                 let mouse_pos = ui.input(|i| i.pointer.hover_pos());
                 if let Some(pos) = mouse_pos {
                     if arrow_rect.contains(pos) {
