@@ -14,6 +14,16 @@ pub enum DetectionStrategy {
     Auto,
 }
 
+impl From<&str> for DetectionStrategy {
+    fn from(s: &str) -> Self {
+        match s {
+            "extension" => DetectionStrategy::Extension,
+            "content" => DetectionStrategy::Content,
+            _ => DetectionStrategy::Auto,
+        }
+    }
+}
+
 pub struct FormatDetector {
     strategy: DetectionStrategy,
 }
@@ -57,7 +67,7 @@ impl FormatDetector {
         let mut file = File::open(path)?;
         let mut magic = [0u8; 4];
         file.read_exact(&mut magic)?;
-        
+
         // 读完后重置文件指针位置
         file.seek(SeekFrom::Start(0))?;
 
@@ -81,4 +91,4 @@ impl FormatDetector {
 pub enum FileFormat {
     Isobmff,
     RealMedia,
-} 
+}
