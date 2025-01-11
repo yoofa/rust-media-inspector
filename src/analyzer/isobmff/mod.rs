@@ -45,17 +45,17 @@ impl IsobmffAnalyzer {
         boxes
             .iter()
             .map(|box_info| {
-                let mut properties = Vec::new();
-                box_info.fill_properties(&mut properties);
+                let mut element = ElementInfo::new(
+                    &box_info.box_type().to_string(),
+                    box_info.offset(),
+                    box_info.size(),
+                );
+                element.readable_value = box_info.description().to_string();
 
-                ElementInfo {
-                    name: box_info.box_type().to_string(),
-                    offset: format!("{}", box_info.offset()),
-                    size: format!("{}", box_info.size()),
-                    value: box_info.description().to_string(),
-                    properties,
-                    children: Self::convert_to_elements(box_info.children()),
-                }
+                // 让box自己填充属性
+                box_info.fill_properties(&mut element.properties);
+                element.children = Self::convert_to_elements(box_info.children());
+                element
             })
             .collect()
     }

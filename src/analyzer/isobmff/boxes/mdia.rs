@@ -1,4 +1,5 @@
 use super::Box;
+use crate::analyzer::Property;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -23,7 +24,7 @@ impl MediaBox {
         "Media Box"
     }
 
-    pub fn fill_properties(&self, _properties: &mut Vec<(String, String)>) {
+    pub fn fill_properties(&self, _properties: &mut Vec<Property>) {
         // Media box itself doesn't have properties
     }
 

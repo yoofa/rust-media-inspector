@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub enum DataEntryBox {
     Url {
@@ -33,10 +35,18 @@ impl DataReferenceBox {
         "Data Reference Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("entry_count".to_string(), self.entries.len().to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new("version", self.version, None::<String>));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "entry_count",
+            self.entries.len(),
+            Some(format!("{} entries", self.entries.len())),
+        ));
 
         // 只显示前几个条目
         for (i, entry) in self.entries.iter().take(5).enumerate() {
@@ -44,9 +54,10 @@ impl DataReferenceBox {
                 DataEntryBox::Url {
                     flags, location, ..
                 } => {
-                    properties.push((
-                        format!("url[{}]", i),
-                        format!("flags=0x{:06x}, location={}", flags, location),
+                    properties.push(Property::new(
+                        &format!("url[{}]", i),
+                        format!("flags=0x{:06x}", flags),
+                        Some(format!("URL: {}", location)),
                     ));
                 }
                 DataEntryBox::Urn {
@@ -55,21 +66,20 @@ impl DataReferenceBox {
                     location,
                     ..
                 } => {
-                    properties.push((
-                        format!("urn[{}]", i),
-                        format!(
-                            "flags=0x{:06x}, name={}, location={}",
-                            flags, name, location
-                        ),
+                    properties.push(Property::new(
+                        &format!("urn[{}]", i),
+                        format!("flags=0x{:06x}", flags),
+                        Some(format!("URN: {} -> {}", name, location)),
                     ));
                 }
             }
         }
 
         if self.entries.len() > 5 {
-            properties.push((
-                "...".to_string(),
+            properties.push(Property::new(
+                "...",
                 format!("{} more entries", self.entries.len() - 5),
+                None::<String>,
             ));
         }
     }

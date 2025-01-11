@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub struct DataInformationBox {}
 
@@ -10,7 +12,5 @@ impl DataInformationBox {
         "Data Information Box"
     }
 
-    pub fn fill_properties(&self, _properties: &mut Vec<(String, String)>) {
-        // Data Information box itself doesn't have properties
-    }
+    pub fn fill_properties(&self, _properties: &mut Vec<Property>) {}
 }

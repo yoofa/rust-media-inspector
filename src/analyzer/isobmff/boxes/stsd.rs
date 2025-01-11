@@ -1,3 +1,4 @@
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct SampleDescriptionBox {
     version: u8,
@@ -27,20 +28,38 @@ impl SampleDescriptionBox {
         "Sample Description Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("entry_count".to_string(), self.entry_count.to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "entry_count",
+            self.entry_count.to_string(),
+            None::<String>,
+        ));
 
         for (i, entry) in self.entries.iter().enumerate() {
-            properties.push((format!("entry[{}].type", i), entry.entry_type.clone()));
-            properties.push((
-                format!("entry[{}].data_reference_index", i),
-                entry.data_reference_index.to_string(),
+            properties.push(Property::new(
+                &format!("entry[{}].type", i),
+                entry.entry_type.clone(),
+                None::<String>,
             ));
-            properties.push((
-                format!("entry[{}].data", i),
+            properties.push(Property::new(
+                &format!("entry[{}].data_reference_index", i),
+                entry.data_reference_index.to_string(),
+                None::<String>,
+            ));
+            properties.push(Property::new(
+                &format!("entry[{}].data", i),
                 format!("{} bytes", entry.data.len()),
+                None::<String>,
             ));
         }
     }

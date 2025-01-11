@@ -1,5 +1,5 @@
 use super::Box;
-
+use crate::analyzer::Property;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct TrackBox {
@@ -23,7 +23,7 @@ impl TrackBox {
         "Track Box"
     }
 
-    pub fn fill_properties(&self, _properties: &mut Vec<(String, String)>) {
+    pub fn fill_properties(&self, _properties: &mut Vec<Property>) {
         // Track box itself doesn't have properties, its children contain the actual data
     }
 

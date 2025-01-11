@@ -22,14 +22,14 @@ mod trak;
 mod vmhd;
 
 use crate::analyzer::isobmff::types::BoxType;
-
+use crate::analyzer::Property;
 /// Common interface for all box types
 pub trait BoxInfo {
     fn box_type(&self) -> BoxType;
     fn size(&self) -> u64;
     fn offset(&self) -> u64;
     fn description(&self) -> &str;
-    fn fill_properties(&self, properties: &mut Vec<(String, String)>);
+    fn fill_properties(&self, properties: &mut Vec<Property>);
     fn children(&self) -> &[Box];
 }
 
@@ -76,7 +76,7 @@ impl BoxInfo for Box {
         self.data.description()
     }
 
-    fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
+    fn fill_properties(&self, properties: &mut Vec<Property>) {
         self.data.fill_properties(properties);
     }
 
@@ -168,7 +168,7 @@ impl BoxData {
         }
     }
 
-    fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
+    fn fill_properties(&self, properties: &mut Vec<Property>) {
         match self {
             BoxData::FileType(b) => b.fill_properties(properties),
             BoxData::Movie(b) => b.fill_properties(properties),

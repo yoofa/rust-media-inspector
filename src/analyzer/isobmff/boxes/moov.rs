@@ -1,3 +1,5 @@
+use crate::analyzer::Property;
+
 #[derive(Debug)]
 pub struct MovieBox;
 
@@ -10,7 +12,7 @@ impl MovieBox {
         "Movie Box"
     }
 
-    pub fn fill_properties(&self, _properties: &mut Vec<(String, String)>) {
+    pub fn fill_properties(&self, _properties: &mut Vec<Property>) {
         // Movie box itself doesn't have properties, its children contain the actual data
     }
 }

@@ -1,3 +1,4 @@
+use crate::analyzer::Property;
 #[derive(Debug)]
 pub struct SampleSizeBox {
     version: u8,
@@ -28,17 +29,34 @@ impl SampleSizeBox {
         "Sample Size Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("sample_size".to_string(), self.sample_size.to_string()));
-        properties.push(("sample_count".to_string(), self.sample_count.to_string()));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "sample_size",
+            self.sample_size.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "sample_count",
+            self.sample_count.to_string(),
+            None::<String>,
+        ));
 
         if self.sample_size == 0 {
             // Only show individual sizes if they're variable
-            properties.push((
-                "entry_sizes".to_string(),
+            properties.push(Property::new(
+                "entry_sizes",
                 format!("{} entries", self.entry_sizes.len()),
+                None::<String>,
             ));
         }
     }

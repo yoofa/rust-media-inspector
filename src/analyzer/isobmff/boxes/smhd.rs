@@ -1,4 +1,5 @@
 use crate::analyzer::isobmff::types::Fixed16_16;
+use crate::analyzer::Property;
 
 #[derive(Debug)]
 pub struct SoundMediaHeaderBox {
@@ -20,9 +21,21 @@ impl SoundMediaHeaderBox {
         "Sound Media Header Box"
     }
 
-    pub fn fill_properties(&self, properties: &mut Vec<(String, String)>) {
-        properties.push(("version".to_string(), self.version.to_string()));
-        properties.push(("flags".to_string(), format!("0x{:06x}", self.flags)));
-        properties.push(("balance".to_string(), format!("{}", self.balance.as_f32())));
+    pub fn fill_properties(&self, properties: &mut Vec<Property>) {
+        properties.push(Property::new(
+            "version",
+            self.version.to_string(),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "flags",
+            format!("0x{:06x}", self.flags),
+            None::<String>,
+        ));
+        properties.push(Property::new(
+            "balance",
+            format!("{}", self.balance.as_f32()),
+            None::<String>,
+        ));
     }
 }

@@ -19,15 +19,64 @@ pub struct MediaInfo {
     pub structure: Vec<ElementInfo>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Property {
+    pub name: String,
+    pub value: String,
+    pub readable_value: String,
+}
+
+impl Property {
+    pub fn new(name: &str, value: impl ToString, readable_value: Option<impl ToString>) -> Self {
+        Self {
+            name: name.to_string(),
+            value: value.to_string(),
+            readable_value: readable_value
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| value.to_string()),
+        }
+    }
+}
+
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct ElementInfo {
     pub name: String,
     pub offset: String,
     pub size: String,
-    pub value: String,
+    pub readable_value: String,
     pub children: Vec<ElementInfo>,
-    pub properties: Vec<(String, String)>,
+    pub properties: Vec<Property>,
+}
+
+impl ElementInfo {
+    pub fn new(name: &str, offset: impl ToString, size: impl ToString) -> Self {
+        Self {
+            name: name.to_string(),
+            offset: offset.to_string(),
+            size: size.to_string(),
+            readable_value: String::new(),
+            properties: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn add_property(
+        &mut self,
+        name: &str,
+        value: impl ToString,
+        readable_value: impl ToString,
+    ) {
+        self.properties.push(Property {
+            name: name.to_string(),
+            value: value.to_string(),
+            readable_value: readable_value.to_string(),
+        });
+    }
+
+    pub fn add_child(&mut self, child: ElementInfo) {
+        self.children.push(child);
+    }
 }
 
 #[allow(dead_code)]
