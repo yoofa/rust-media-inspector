@@ -468,45 +468,53 @@ impl MediaInspectorApp {
                             ui.heading(RichText::new("Basic Information").size(24.0));
                             ui.add_space(12.0);
 
-                            // 使用 Grid 来显示基本信息
-                            egui::Grid::new("basic_info_grid")
-                                .num_columns(2)
-                                .spacing([60.0, 12.0])
+                            // 使用 Grid 来显示基本信息，添加虚线边框
+                            egui::Frame::none()
+                                .stroke(egui::Stroke::new(1.0, Color32::from_rgb(100, 100, 100)))
                                 .show(ui, |ui| {
-                                    ui.label(RichText::new("Offset").strong().size(20.0));
-                                    if let Ok(offset) = element.offset.parse::<u64>() {
-                                        ui.label(
-                                            RichText::new(format!(
-                                                "{:#x} ({} bytes)",
-                                                offset, offset
-                                            ))
-                                            .monospace()
-                                            .size(18.0),
-                                        );
-                                    } else {
-                                        ui.label(
-                                            RichText::new(&element.offset).monospace().size(18.0),
-                                        );
-                                    }
-                                    ui.end_row();
+                                    egui::Grid::new("basic_info_grid")
+                                        .num_columns(2)
+                                        .spacing([60.0, 6.0]) // 减小行间距
+                                        .striped(true) // 添加条纹背景
+                                        .show(ui, |ui| {
+                                            ui.label(RichText::new("Offset").strong().size(20.0));
+                                            if let Ok(offset) = element.offset.parse::<u64>() {
+                                                ui.label(
+                                                    RichText::new(format!(
+                                                        "{:#x} ({} bytes)",
+                                                        offset, offset
+                                                    ))
+                                                    .monospace()
+                                                    .size(18.0),
+                                                );
+                                            } else {
+                                                ui.label(
+                                                    RichText::new(&element.offset)
+                                                        .monospace()
+                                                        .size(18.0),
+                                                );
+                                            }
+                                            ui.end_row();
 
-                                    ui.add_space(4.0);
-                                    ui.add_space(4.0);
-                                    ui.end_row();
-
-                                    ui.label(RichText::new("Size").strong().size(20.0));
-                                    if let Ok(size) = element.size.parse::<u64>() {
-                                        ui.label(
-                                            RichText::new(format!("{:#x} ({} bytes)", size, size))
-                                                .monospace()
-                                                .size(18.0),
-                                        );
-                                    } else {
-                                        ui.label(
-                                            RichText::new(&element.size).monospace().size(18.0),
-                                        );
-                                    }
-                                    ui.end_row();
+                                            ui.label(RichText::new("Size").strong().size(20.0));
+                                            if let Ok(size) = element.size.parse::<u64>() {
+                                                ui.label(
+                                                    RichText::new(format!(
+                                                        "{:#x} ({} bytes)",
+                                                        size, size
+                                                    ))
+                                                    .monospace()
+                                                    .size(18.0),
+                                                );
+                                            } else {
+                                                ui.label(
+                                                    RichText::new(&element.size)
+                                                        .monospace()
+                                                        .size(18.0),
+                                                );
+                                            }
+                                            ui.end_row();
+                                        });
                                 });
                         });
                 });
@@ -523,50 +531,54 @@ impl MediaInspectorApp {
                                 ui.heading(RichText::new("Properties").size(24.0));
                                 ui.add_space(12.0);
 
-                                // 使用 Grid 来显示属性
-                                egui::Grid::new("properties_grid")
-                                    .num_columns(2)
-                                    .spacing([60.0, 12.0])
+                                // 使用 Grid 来显示属性，添加虚线边框
+                                egui::Frame::none()
+                                    .stroke(egui::Stroke::new(
+                                        1.0,
+                                        Color32::from_rgb(100, 100, 100),
+                                    ))
                                     .show(ui, |ui| {
-                                        for prop in &element.properties {
-                                            // 属性名（左列）
-                                            ui.label(
-                                                RichText::new(&prop.name)
-                                                    .color(Color32::LIGHT_GREEN)
-                                                    .strong()
-                                                    .size(18.0),
-                                            );
+                                        egui::Grid::new("properties_grid")
+                                            .num_columns(2)
+                                            .spacing([60.0, 6.0]) // 减小行间距
+                                            .striped(true) // 添加条纹背景
+                                            .show(ui, |ui| {
+                                                for prop in &element.properties {
+                                                    // 属性名（左列）
+                                                    ui.label(
+                                                        RichText::new(&prop.name)
+                                                            .color(Color32::LIGHT_GREEN)
+                                                            .strong()
+                                                            .size(18.0),
+                                                    );
 
-                                            // 属性值（右列）
-                                            if prop.value.contains('\n') {
-                                                // 多行值使用代码块显示
-                                                egui::Frame::none()
-                                                    .fill(Color32::from_rgb(30, 30, 30))
-                                                    .inner_margin(12.0)
-                                                    .rounding(4.0)
-                                                    .show(ui, |ui| {
+                                                    // 属性值（右列）
+                                                    if prop.value.contains('\n') {
+                                                        // 多行值使用代码块显示
+                                                        egui::Frame::none()
+                                                            .fill(Color32::from_rgb(30, 30, 30))
+                                                            .inner_margin(12.0)
+                                                            .rounding(4.0)
+                                                            .show(ui, |ui| {
+                                                                ui.label(
+                                                                    RichText::new(&prop.value)
+                                                                        .monospace()
+                                                                        .size(16.0)
+                                                                        .color(Color32::LIGHT_GRAY),
+                                                                );
+                                                            });
+                                                    } else {
+                                                        // 单行值直接显示
                                                         ui.label(
                                                             RichText::new(&prop.value)
                                                                 .monospace()
-                                                                .size(16.0)
+                                                                .size(18.0)
                                                                 .color(Color32::LIGHT_GRAY),
                                                         );
-                                                    });
-                                            } else {
-                                                // 单行值直接显示
-                                                ui.label(
-                                                    RichText::new(&prop.value)
-                                                        .monospace()
-                                                        .size(18.0)
-                                                        .color(Color32::LIGHT_GRAY),
-                                                );
-                                            }
-                                            ui.end_row();
-
-                                            ui.add_space(4.0);
-                                            ui.add_space(4.0);
-                                            ui.end_row();
-                                        }
+                                                    }
+                                                    ui.end_row();
+                                                }
+                                            });
                                     });
                             });
                     });
@@ -584,24 +596,37 @@ impl MediaInspectorApp {
                                 ui.heading(RichText::new("Children").size(24.0));
                                 ui.add_space(12.0);
 
-                                for child in &element.children {
-                                    ui.horizontal(|ui| {
-                                        ui.label(RichText::new("•").size(18.0));
-                                        ui.add_space(8.0);
-                                        ui.label(
-                                            RichText::new(&child.name)
-                                                .size(18.0)
-                                                .color(Color32::LIGHT_GRAY),
-                                        );
-                                        ui.add_space(8.0);
-                                        ui.label(
-                                            RichText::new(format!("(size: {} bytes)", child.size))
-                                                .size(16.0)
-                                                .weak(),
-                                        );
+                                // 使用 Grid 来显示子元素，添加虚线边框
+                                egui::Frame::none()
+                                    .stroke(egui::Stroke::new(
+                                        1.0,
+                                        Color32::from_rgb(100, 100, 100),
+                                    ))
+                                    .show(ui, |ui| {
+                                        egui::Grid::new("children_grid")
+                                            .num_columns(3)
+                                            .spacing([20.0, 6.0]) // 减小行间距
+                                            .striped(true) // 添加条纹背景
+                                            .show(ui, |ui| {
+                                                for child in &element.children {
+                                                    ui.label(RichText::new("•").size(18.0));
+                                                    ui.label(
+                                                        RichText::new(&child.name)
+                                                            .size(18.0)
+                                                            .color(Color32::LIGHT_GRAY),
+                                                    );
+                                                    ui.label(
+                                                        RichText::new(format!(
+                                                            "(size: {} bytes)",
+                                                            child.size
+                                                        ))
+                                                        .size(16.0)
+                                                        .weak(),
+                                                    );
+                                                    ui.end_row();
+                                                }
+                                            });
                                     });
-                                    ui.add_space(8.0);
-                                }
                             });
                     });
                 }
