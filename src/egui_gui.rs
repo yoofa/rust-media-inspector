@@ -372,12 +372,8 @@ impl MediaInspectorApp {
             Self::LEVEL_COLORS[depth % Self::LEVEL_COLORS.len()]
         };
 
-        // 简化显示文本，移除图标
-        let display_text = if element.children.is_empty() {
-            format!("{}{}", indent, element.name)
-        } else {
-            format!("{}{} ({})", indent, element.name, element.children.len())
-        };
+        // 简化显示文本，不再显示子元素数量
+        let display_text = format!("{}{}", indent, element.name);
 
         let text = RichText::new(display_text).size(18.0).color(color);
 
