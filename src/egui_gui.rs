@@ -386,7 +386,12 @@ impl MediaInspectorApp {
         ui.add_space(2.0);
 
         if element.children.is_empty() {
+            // 直接使用 Label 但添加点击感应
             let response = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
+
+            // 设置鼠标指针为默认
+            response.clone().on_hover_cursor(egui::CursorIcon::Default);
+
             if response.clicked() {
                 *selected_element = Some(display_path);
             }
@@ -417,8 +422,13 @@ impl MediaInspectorApp {
                 }
             });
 
+            // 设置鼠标指针为默认
             let header_rect = header_response.header_response.rect;
             let is_clicked = header_response.header_response.clicked();
+            header_response
+                .header_response
+                .clone()
+                .on_hover_cursor(egui::CursorIcon::Default);
 
             let arrow_rect =
                 egui::Rect::from_min_size(header_rect.min, egui::vec2(20.0, header_rect.height()));

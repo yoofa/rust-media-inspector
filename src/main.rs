@@ -33,7 +33,7 @@ fn main() {
                 .short('o')
                 .long("output")
                 .value_parser(["console", "json", "gui"])
-                .default_value("console")
+                .default_value("gui")
                 .help("Output mode (console/json/gui)"),
         )
         .arg(
@@ -55,7 +55,7 @@ fn main() {
     let output_mode: OutputMode = matches
         .get_one::<String>("output")
         .map(|s| s.as_str())
-        .unwrap_or("console")
+        .unwrap_or("gui")
         .into();
 
     let strategy = matches.get_one::<String>("strategy").unwrap();
