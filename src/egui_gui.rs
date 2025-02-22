@@ -9,7 +9,7 @@ use crate::analyzer::{DefaultAnalyzer, ElementInfo, MediaAnalyzer, MediaInfo};
 pub fn run_gui() -> i32 {
     let options = NativeOptions {
         viewport: ViewportBuilder::default()
-            .with_inner_size([800.0, 600.0])
+            .with_inner_size([1024.0, 768.0])
             .with_title("Media Inspector")
             .with_drag_and_drop(true),
         ..Default::default()
@@ -23,26 +23,31 @@ pub fn run_gui() -> i32 {
             style.text_styles = [
                 (
                     egui::TextStyle::Heading,
-                    egui::FontId::new(20.0, egui::FontFamily::Proportional),
+                    egui::FontId::new(24.0, egui::FontFamily::Proportional),
                 ),
                 (
                     egui::TextStyle::Body,
-                    egui::FontId::new(16.0, egui::FontFamily::Proportional),
+                    egui::FontId::new(18.0, egui::FontFamily::Proportional),
                 ),
                 (
                     egui::TextStyle::Monospace,
-                    egui::FontId::new(16.0, egui::FontFamily::Monospace),
+                    egui::FontId::new(18.0, egui::FontFamily::Monospace),
                 ),
                 (
                     egui::TextStyle::Button,
-                    egui::FontId::new(16.0, egui::FontFamily::Proportional),
+                    egui::FontId::new(18.0, egui::FontFamily::Proportional),
                 ),
                 (
                     egui::TextStyle::Small,
-                    egui::FontId::new(14.0, egui::FontFamily::Proportional),
+                    egui::FontId::new(16.0, egui::FontFamily::Proportional),
                 ),
             ]
             .into();
+
+            style.spacing.item_spacing = egui::vec2(10.0, 10.0);
+            style.spacing.window_margin = egui::style::Margin::same(12.0);
+            style.spacing.button_padding = egui::vec2(12.0, 6.0);
+
             cc.egui_ctx.set_style(style);
             cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Box::new(MediaInspectorApp::default())
@@ -159,22 +164,23 @@ impl eframe::App for MediaInspectorApp {
 
         // 菜单栏
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+            ui.add_space(4.0);
             egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open...").clicked() {
+                ui.menu_button(RichText::new("File").size(18.0), |ui| {
+                    if ui.button(RichText::new("Open...").size(18.0)).clicked() {
                         if let Some(path) = FileDialog::new().pick_file() {
                             self.analyze_file(path.to_str().unwrap());
                             ui.close_menu();
                         }
                     }
-                    if ui.button("Exit").clicked() {
+                    if ui.button(RichText::new("Exit").size(18.0)).clicked() {
                         self.should_exit = true;
                         ui.close_menu();
                     }
                 });
 
-                ui.menu_button("View", |ui| {
-                    ui.menu_button("Detection Strategy", |ui| {
+                ui.menu_button(RichText::new("View").size(18.0), |ui| {
+                    ui.menu_button(RichText::new("Detection Strategy").size(18.0), |ui| {
                         let strategies = [
                             (DetectionStrategy::Auto, "Auto"),
                             (DetectionStrategy::Extension, "Extension"),
@@ -185,7 +191,7 @@ impl eframe::App for MediaInspectorApp {
                             if ui
                                 .selectable_label(
                                     self.detection_strategy == strategy,
-                                    RichText::new(label).size(16.0),
+                                    RichText::new(label).size(18.0),
                                 )
                                 .clicked()
                             {
@@ -203,10 +209,11 @@ impl eframe::App for MediaInspectorApp {
                 // 显示当前文件名
                 if let Some(path) = &self.current_file {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(RichText::new(path).size(14.0).color(Color32::LIGHT_GRAY));
+                        ui.label(RichText::new(path).size(16.0).color(Color32::LIGHT_GRAY));
                     });
                 }
             });
+            ui.add_space(4.0);
         });
 
         // 检查分析结果
@@ -230,22 +237,28 @@ impl eframe::App for MediaInspectorApp {
                 .collapsible(false)
                 .resizable(false)
                 .show(ctx, |ui| {
-                    ui.colored_label(Color32::RED, &error_message);
-                    if ui.button("Close").clicked() {
+                    ui.add_space(8.0);
+                    ui.colored_label(Color32::RED, RichText::new(&error_message).size(18.0));
+                    ui.add_space(12.0);
+                    if ui.button(RichText::new("Close").size(18.0)).clicked() {
                         self.error_message = None;
                     }
+                    ui.add_space(8.0);
                 });
         }
 
         // 使用 SidePanel 和 CentralPanel 创建双栏布局
         egui::SidePanel::left("tree_panel")
             .resizable(true)
-            .default_width(300.0)
+            .default_width(350.0)
             .show(ctx, |ui| {
+                ui.add_space(8.0);
                 ui.horizontal(|ui| {
-                    ui.label("Search:");
+                    ui.label(RichText::new("Search:").size(18.0));
+                    ui.add_space(8.0);
                     ui.text_edit_singleline(&mut self.search_text);
                 });
+                ui.add_space(12.0);
 
                 if let Some(info) = &self.media_info {
                     let search_text = self.search_text.clone();
@@ -255,9 +268,12 @@ impl eframe::App for MediaInspectorApp {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         ui.heading(
                             RichText::new(format!("Format: {}", info.format))
+                                .size(22.0)
                                 .color(Color32::LIGHT_BLUE),
                         );
+                        ui.add_space(8.0);
                         ui.separator();
+                        ui.add_space(8.0);
                         for (i, element) in info.structure.iter().enumerate() {
                             Self::show_element_tree(
                                 ui,
@@ -279,16 +295,19 @@ impl eframe::App for MediaInspectorApp {
                 } else {
                     ui.vertical_centered(|ui| {
                         ui.add_space(100.0);
-                        ui.label("Drag and drop a media file here");
-                        ui.label("or");
-                        ui.label("use File -> Open to select a file");
+                        ui.label(RichText::new("Drag and drop a media file here").size(20.0));
+                        ui.add_space(16.0);
+                        ui.label(RichText::new("or").size(18.0));
+                        ui.add_space(16.0);
+                        ui.label(RichText::new("use File -> Open to select a file").size(18.0));
                     });
                 }
             });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            ui.add_space(8.0);
             if let Some(err) = &self.error_message {
-                ui.colored_label(Color32::RED, err);
+                ui.colored_label(Color32::RED, RichText::new(err).size(18.0));
             } else if let Some(selected_path) = &self.selected_element {
                 if let Some(info) = &self.media_info {
                     if let Some(element) = self.find_element(info, selected_path) {
@@ -298,7 +317,7 @@ impl eframe::App for MediaInspectorApp {
             } else {
                 ui.vertical_centered(|ui| {
                     ui.add_space(100.0);
-                    ui.label("Select an element to view its details");
+                    ui.label(RichText::new("Select an element to view its details").size(20.0));
                 });
             }
         });
@@ -360,9 +379,11 @@ impl MediaInspectorApp {
             format!("{}{} ({})", indent, element.name, element.children.len())
         };
 
-        let text = RichText::new(display_text).size(16.0).color(color);
+        let text = RichText::new(display_text).size(18.0).color(color);
 
         let base_id = ui.make_persistent_id(&unique_path);
+
+        ui.add_space(2.0);
 
         if element.children.is_empty() {
             let response = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
@@ -378,6 +399,7 @@ impl MediaInspectorApp {
                 .open(Some(is_expanded));
 
             let header_response = header.show(ui, |ui| {
+                ui.add_space(4.0);
                 for (child_index, child) in element.children.iter().enumerate() {
                     ui.push_id(child_index, |ui| {
                         Self::show_element_tree(
@@ -416,6 +438,8 @@ impl MediaInspectorApp {
                 }
             }
         }
+
+        ui.add_space(2.0);
     }
 
     // 显示元素详情（右侧面板）
@@ -427,127 +451,158 @@ impl MediaInspectorApp {
                     ui.heading(
                         RichText::new(&element.name)
                             .color(Color32::LIGHT_BLUE)
-                            .size(24.0),
+                            .size(28.0),
                     );
                 });
-                ui.add_space(8.0);
+                ui.add_space(12.0);
                 ui.separator();
-                ui.add_space(16.0);
+                ui.add_space(20.0);
 
                 // 基本信息
                 ui.push_id("basic_info", |ui| {
-                    ui.group(|ui| {
-                        ui.heading(RichText::new("Basic Information").size(20.0));
-                        ui.add_space(8.0);
+                    egui::Frame::none()
+                        .fill(Color32::from_rgb(40, 40, 45))
+                        .inner_margin(egui::style::Margin::same(16.0))
+                        .rounding(8.0)
+                        .show(ui, |ui| {
+                            ui.heading(RichText::new("Basic Information").size(24.0));
+                            ui.add_space(12.0);
 
-                        // 使用 Grid 来显示基本信息
-                        egui::Grid::new("basic_info_grid")
-                            .num_columns(2)
-                            .spacing([40.0, 8.0])
-                            .show(ui, |ui| {
-                                ui.label(RichText::new("Offset").strong().size(16.0));
-                                if let Ok(offset) = element.offset.parse::<u64>() {
-                                    ui.label(
-                                        RichText::new(format!("{:#x} ({} bytes)", offset, offset))
+                            // 使用 Grid 来显示基本信息
+                            egui::Grid::new("basic_info_grid")
+                                .num_columns(2)
+                                .spacing([60.0, 12.0])
+                                .show(ui, |ui| {
+                                    ui.label(RichText::new("Offset").strong().size(20.0));
+                                    if let Ok(offset) = element.offset.parse::<u64>() {
+                                        ui.label(
+                                            RichText::new(format!(
+                                                "{:#x} ({} bytes)",
+                                                offset, offset
+                                            ))
                                             .monospace()
-                                            .size(16.0),
-                                    );
-                                } else {
-                                    ui.label(RichText::new(&element.offset).monospace().size(16.0));
-                                }
-                                ui.end_row();
+                                            .size(18.0),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            RichText::new(&element.offset).monospace().size(18.0),
+                                        );
+                                    }
+                                    ui.end_row();
 
-                                ui.label(RichText::new("Size").strong().size(16.0));
-                                if let Ok(size) = element.size.parse::<u64>() {
-                                    ui.label(
-                                        RichText::new(format!("{:#x} ({} bytes)", size, size))
-                                            .monospace()
-                                            .size(16.0),
-                                    );
-                                } else {
-                                    ui.label(RichText::new(&element.size).monospace().size(16.0));
-                                }
-                                ui.end_row();
-                            });
-                    });
+                                    ui.add_space(4.0);
+                                    ui.add_space(4.0);
+                                    ui.end_row();
+
+                                    ui.label(RichText::new("Size").strong().size(20.0));
+                                    if let Ok(size) = element.size.parse::<u64>() {
+                                        ui.label(
+                                            RichText::new(format!("{:#x} ({} bytes)", size, size))
+                                                .monospace()
+                                                .size(18.0),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            RichText::new(&element.size).monospace().size(18.0),
+                                        );
+                                    }
+                                    ui.end_row();
+                                });
+                        });
                 });
-                ui.add_space(16.0);
+                ui.add_space(20.0);
 
                 // 属性信息
                 if !element.properties.is_empty() {
                     ui.push_id("properties", |ui| {
-                        ui.group(|ui| {
-                            ui.heading(RichText::new("Properties").size(20.0));
-                            ui.add_space(8.0);
+                        egui::Frame::none()
+                            .fill(Color32::from_rgb(40, 40, 45))
+                            .inner_margin(egui::style::Margin::same(16.0))
+                            .rounding(8.0)
+                            .show(ui, |ui| {
+                                ui.heading(RichText::new("Properties").size(24.0));
+                                ui.add_space(12.0);
 
-                            // 使用 Grid 来显示属性
-                            egui::Grid::new("properties_grid")
-                                .num_columns(2)
-                                .spacing([40.0, 8.0])
-                                .show(ui, |ui| {
-                                    for prop in &element.properties {
-                                        // 属性名（左列）
-                                        ui.label(
-                                            RichText::new(&prop.name)
-                                                .color(Color32::LIGHT_GREEN)
-                                                .strong()
-                                                .size(16.0),
-                                        );
-
-                                        // 属性值（右列）
-                                        if prop.value.contains('\n') {
-                                            // 多行值使用代码块显示
-                                            egui::Frame::none()
-                                                .fill(Color32::from_rgb(30, 30, 30))
-                                                .inner_margin(8.0)
-                                                .show(ui, |ui| {
-                                                    ui.label(
-                                                        RichText::new(&prop.value)
-                                                            .monospace()
-                                                            .size(16.0)
-                                                            .color(Color32::LIGHT_GRAY),
-                                                    );
-                                                });
-                                        } else {
-                                            // 单行值直接显示
+                                // 使用 Grid 来显示属性
+                                egui::Grid::new("properties_grid")
+                                    .num_columns(2)
+                                    .spacing([60.0, 12.0])
+                                    .show(ui, |ui| {
+                                        for prop in &element.properties {
+                                            // 属性名（左列）
                                             ui.label(
-                                                RichText::new(&prop.value)
-                                                    .monospace()
-                                                    .size(16.0)
-                                                    .color(Color32::LIGHT_GRAY),
+                                                RichText::new(&prop.name)
+                                                    .color(Color32::LIGHT_GREEN)
+                                                    .strong()
+                                                    .size(18.0),
                                             );
+
+                                            // 属性值（右列）
+                                            if prop.value.contains('\n') {
+                                                // 多行值使用代码块显示
+                                                egui::Frame::none()
+                                                    .fill(Color32::from_rgb(30, 30, 30))
+                                                    .inner_margin(12.0)
+                                                    .rounding(4.0)
+                                                    .show(ui, |ui| {
+                                                        ui.label(
+                                                            RichText::new(&prop.value)
+                                                                .monospace()
+                                                                .size(16.0)
+                                                                .color(Color32::LIGHT_GRAY),
+                                                        );
+                                                    });
+                                            } else {
+                                                // 单行值直接显示
+                                                ui.label(
+                                                    RichText::new(&prop.value)
+                                                        .monospace()
+                                                        .size(18.0)
+                                                        .color(Color32::LIGHT_GRAY),
+                                                );
+                                            }
+                                            ui.end_row();
+
+                                            ui.add_space(4.0);
+                                            ui.add_space(4.0);
+                                            ui.end_row();
                                         }
-                                        ui.end_row();
-                                    }
-                                });
-                        });
+                                    });
+                            });
                     });
-                    ui.add_space(16.0);
+                    ui.add_space(20.0);
                 }
 
                 // 子元素信息
                 if !element.children.is_empty() {
                     ui.push_id("children", |ui| {
-                        ui.group(|ui| {
-                            ui.heading(RichText::new("Children").size(20.0));
-                            ui.add_space(8.0);
+                        egui::Frame::none()
+                            .fill(Color32::from_rgb(40, 40, 45))
+                            .inner_margin(egui::style::Margin::same(16.0))
+                            .rounding(8.0)
+                            .show(ui, |ui| {
+                                ui.heading(RichText::new("Children").size(24.0));
+                                ui.add_space(12.0);
 
-                            for child in &element.children {
-                                ui.horizontal(|ui| {
-                                    ui.label("•"); // 添加项目符号
-                                    ui.label(
-                                        RichText::new(&child.name)
-                                            .size(16.0)
-                                            .color(Color32::LIGHT_GRAY),
-                                    );
-                                    ui.label(
-                                        RichText::new(format!("(size: {} bytes)", child.size))
-                                            .size(14.0)
-                                            .weak(),
-                                    );
-                                });
-                            }
-                        });
+                                for child in &element.children {
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new("•").size(18.0));
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            RichText::new(&child.name)
+                                                .size(18.0)
+                                                .color(Color32::LIGHT_GRAY),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            RichText::new(format!("(size: {} bytes)", child.size))
+                                                .size(16.0)
+                                                .weak(),
+                                        );
+                                    });
+                                    ui.add_space(8.0);
+                                }
+                            });
                     });
                 }
             });
