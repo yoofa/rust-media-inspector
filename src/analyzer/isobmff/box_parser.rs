@@ -1,9 +1,10 @@
 use super::boxes::{
     Box, BoxData, BoxInfo, ChunkOffsetBox, DataEntryBox, DataInformationBox, DataReferenceBox,
-    EditBox, EditListBox, EditListEntry, FileTypeBox, HandlerBox, MediaBox, MediaDataBox,
-    MediaHeaderBox, MediaInfoBox, MovieBox, MovieHeaderBox, SampleDescriptionBox, SampleEntry,
-    SampleSizeBox, SampleTableBox, SampleToChunkBox, SampleToChunkEntry, SoundMediaHeaderBox,
-    TimeToSampleBox, TimeToSampleEntry, TrackBox, TrackHeaderBox, VideoMediaHeaderBox,
+    EditBox, EditListBox, EditListEntry, FileTypeBox, GenericBox, HandlerBox, MediaBox,
+    MediaDataBox, MediaHeaderBox, MediaInfoBox, MovieBox, MovieHeaderBox, SampleDescriptionBox,
+    SampleEntry, SampleSizeBox, SampleTableBox, SampleToChunkBox, SampleToChunkEntry,
+    SoundMediaHeaderBox, TimeToSampleBox, TimeToSampleEntry, TrackBox, TrackHeaderBox,
+    VideoMediaHeaderBox,
 };
 use super::types::{BoxType, Fixed16_16, Matrix, Mp4DateTime};
 use crate::error::MediaError;
@@ -103,15 +104,15 @@ impl BoxParser {
             _ => {
                 if self.debug {
                     println!(
-                        "Skipping unknown box: type={}, offset={}, size={}, next_offset={}",
+                        "Unknown box type: {}, offset={}, size={}",
                         box_type.as_str(),
                         offset,
-                        actual_size,
-                        offset + actual_size
+                        actual_size
                     );
                 }
+                // Skip the data content but still create a box with the original 4CC type
                 self.reader.skip(actual_size - header_size)?;
-                BoxData::Unknown
+                BoxData::Generic(GenericBox::new(box_type.clone()))
             }
         };
 
@@ -902,9 +903,30 @@ fn is_valid_box_type(box_type: &BoxType) -> bool {
     // 添加所有有效的 box 类型
     matches!(
         box_type.as_str(),
-        "ftyp" | "moov" | "mvhd" | "trak" | "tkhd" | "mdia" | "mdhd" | "hdlr" |
-        "minf" | "vmhd" | "smhd" | "dinf" | "dref" | "stbl" | "stsd" | "stts" |
-        "stsc" | "stsz" | "stco" | "mdat" | "free" | "skip" | "wide" | "edts" |
-        "elst"
+        "ftyp"
+            | "moov"
+            | "mvhd"
+            | "trak"
+            | "tkhd"
+            | "mdia"
+            | "mdhd"
+            | "hdlr"
+            | "minf"
+            | "vmhd"
+            | "smhd"
+            | "dinf"
+            | "dref"
+            | "stbl"
+            | "stsd"
+            | "stts"
+            | "stsc"
+            | "stsz"
+            | "stco"
+            | "mdat"
+            | "free"
+            | "skip"
+            | "wide"
+            | "edts"
+            | "elst"
     )
 }

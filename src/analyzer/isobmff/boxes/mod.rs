@@ -3,6 +3,7 @@ mod dref;
 mod edts;
 mod elst;
 mod ftyp;
+mod generic;
 mod hdlr;
 mod mdat;
 mod mdhd;
@@ -91,6 +92,7 @@ pub use dref::DataReferenceBox;
 pub use edts::EditBox;
 pub use elst::{EditListBox, EditListEntry};
 pub use ftyp::FileTypeBox;
+pub use generic::GenericBox;
 pub use hdlr::HandlerBox;
 pub use mdat::MediaDataBox;
 pub use mdhd::MediaHeaderBox;
@@ -136,6 +138,7 @@ pub enum BoxData {
     ChunkOffset(ChunkOffsetBox),
     DataInformation(DataInformationBox),
     DataReference(DataReferenceBox),
+    Generic(GenericBox),
     Unknown,
 }
 
@@ -164,6 +167,7 @@ impl BoxData {
             BoxData::ChunkOffset(b) => b.description(),
             BoxData::DataInformation(b) => b.description(),
             BoxData::DataReference(b) => b.description(),
+            BoxData::Generic(b) => b.description(),
             BoxData::Unknown => "Unknown box type",
         }
     }
@@ -192,6 +196,7 @@ impl BoxData {
             BoxData::ChunkOffset(b) => b.fill_properties(properties),
             BoxData::DataInformation(b) => b.fill_properties(properties),
             BoxData::DataReference(b) => b.fill_properties(properties),
+            BoxData::Generic(b) => b.fill_properties(properties),
             BoxData::Unknown => {}
         }
     }
