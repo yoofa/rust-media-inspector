@@ -308,10 +308,35 @@ impl eframe::App for MediaInspectorApp {
             ui.add_space(8.0);
             if let Some(err) = &self.error_message {
                 ui.colored_label(Color32::RED, RichText::new(err).size(18.0));
-            } else if let Some(selected_path) = &self.selected_element {
+            } else if let Some(selected_path) = &self.selected_element.clone() {
                 if let Some(info) = &self.media_info {
-                    if let Some(element) = self.find_element(info, selected_path) {
+                    // 创建一个唯一ID，用于标记是否已经查找过
+                    let search_id = ui.make_persistent_id(format!("search_{}", selected_path));
+
+                    // 使用 egui 的记忆功能来记录是否已经查找过
+                    let should_search = ui.memory_mut(|mem| {
+                        if mem.data.get_temp::<bool>(search_id).is_some() {
+                            false // 已经查找过，不需要再次查找
+                        } else {
+                            mem.data.insert_temp(search_id, true);
+                            true // 第一次查找
+                        }
+                    });
+
+                    // 只在需要时打印日志
+                    if should_search {
+                        println!("Finding element with path: {}", selected_path);
+                    }
+
+                    // 查找元素
+                    if let Some(element) = self.find_element(info, &selected_path) {
                         self.show_element_details(ui, element);
+                    } else {
+                        ui.label(
+                            RichText::new(format!("Element not found for path: {}", selected_path))
+                                .size(16.0)
+                                .color(Color32::RED),
+                        );
                     }
                 }
             } else {
@@ -347,8 +372,12 @@ impl MediaInspectorApp {
         expanded_nodes: &mut std::collections::HashSet<String>,
         selected_element: &mut Option<String>,
     ) {
-        let display_path = format!("{}/{}", parent_path, element.name);
-        let unique_path = format!("{}#{}_{}", parent_path, parent_index, index);
+        // 为每个元素创建唯一的路径，包含索引信息
+        let display_path = if parent_path.is_empty() {
+            format!("/{}#{}", element.name, index) // 根元素路径
+        } else {
+            format!("{}/{}#{}", parent_path, element.name, index) // 子元素路径
+        };
 
         let matches_search = search_text.is_empty()
             || element
@@ -377,7 +406,7 @@ impl MediaInspectorApp {
 
         let text = RichText::new(display_text).size(18.0).color(color);
 
-        let base_id = ui.make_persistent_id(&unique_path);
+        let base_id = ui.make_persistent_id(&display_path);
 
         ui.add_space(2.0);
 
@@ -392,7 +421,7 @@ impl MediaInspectorApp {
                 *selected_element = Some(display_path);
             }
         } else {
-            let is_expanded = expanded_nodes.contains(&unique_path);
+            let is_expanded = expanded_nodes.contains(&display_path);
 
             let header = egui::CollapsingHeader::new(text)
                 .id_source(base_id)
@@ -434,9 +463,9 @@ impl MediaInspectorApp {
                 if let Some(pos) = mouse_pos {
                     if arrow_rect.contains(pos) {
                         if is_expanded {
-                            expanded_nodes.remove(&unique_path);
+                            expanded_nodes.remove(&display_path);
                         } else {
-                            expanded_nodes.insert(unique_path);
+                            expanded_nodes.insert(display_path);
                         }
                     } else {
                         *selected_element = Some(display_path);
@@ -640,37 +669,57 @@ impl MediaInspectorApp {
         });
     }
 
-    // 查找指定路径的元素
+    // 查找指定路径的元素 - 处理带索引的路径
     fn find_element<'a>(&self, info: &'a MediaInfo, path: &str) -> Option<&'a ElementInfo> {
-        fn find_recursive<'a>(
-            element: &'a ElementInfo,
-            path_parts: &[&str],
-            current_depth: usize,
-        ) -> Option<&'a ElementInfo> {
-            if current_depth >= path_parts.len() {
+        let path_parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+
+        if path_parts.is_empty() {
+            return None;
+        }
+
+        // 按名称和索引查找
+        let mut current_elements = &info.structure;
+        let mut current_element = None;
+
+        for part in &path_parts {
+            // 分离名称和索引
+            let name_index: Vec<&str> = part.split('#').collect();
+            let name = name_index[0];
+            let index_str = if name_index.len() > 1 {
+                name_index[1]
+            } else {
+                "0"
+            };
+
+            // 尝试找到所有匹配名称的元素
+            let matching_elements: Vec<&ElementInfo> =
+                current_elements.iter().filter(|e| e.name == name).collect();
+
+            if !matching_elements.is_empty() {
+                // 如果有索引，尝试使用索引
+                if let Ok(index) = index_str.parse::<usize>() {
+                    if index < matching_elements.len() {
+                        current_element = Some(matching_elements[index]);
+                    } else if !matching_elements.is_empty() {
+                        // 如果索引超出范围，使用第一个匹配的元素
+                        current_element = Some(matching_elements[0]);
+                    }
+                } else if !matching_elements.is_empty() {
+                    // 如果索引无效，使用第一个匹配的元素
+                    current_element = Some(matching_elements[0]);
+                }
+
+                if let Some(element) = current_element {
+                    current_elements = &element.children;
+                } else {
+                    return None;
+                }
+            } else {
                 return None;
             }
-
-            if element.name == path_parts[current_depth] {
-                if current_depth == path_parts.len() - 1 {
-                    return Some(element);
-                }
-                for child in &element.children {
-                    if let Some(found) = find_recursive(child, path_parts, current_depth + 1) {
-                        return Some(found);
-                    }
-                }
-            }
-            None
         }
 
-        let path_parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        for element in &info.structure {
-            if let Some(found) = find_recursive(element, &path_parts, 0) {
-                return Some(found);
-            }
-        }
-        None
+        current_element
     }
 
     // 添加辅助方法用于展开所有节点
@@ -824,4 +873,24 @@ impl MediaInspectorApp {
             tx.send(result).ok();
         });
     }
+}
+
+// 辅助函数：根据索引查找元素
+fn find_element_by_index<'a>(info: &'a MediaInfo, index: usize) -> Option<&'a ElementInfo> {
+    // 简化实现，实际上需要根据您的数据结构调整
+    if index < info.structure.len() {
+        Some(&info.structure[index])
+    } else {
+        None
+    }
+}
+
+// 辅助函数：计算元素的索引
+fn calculate_element_index(info: &MediaInfo, element: &ElementInfo) -> usize {
+    // 简化实现，实际上需要根据您的数据结构调整
+    // 这里只是返回元素在顶层结构中的位置
+    info.structure
+        .iter()
+        .position(|e| e.name == element.name && e.offset == element.offset)
+        .unwrap_or(0)
 }
